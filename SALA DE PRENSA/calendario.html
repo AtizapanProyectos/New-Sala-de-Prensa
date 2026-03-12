@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atizapán de Zaragoza | Agenda Institucional</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Montserrat:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --color-primary: #003366; 
+            --color-accent: #c5a47e; 
+            --color-text-dark: #1a1a1a;
+            --color-text-light: #888888;
+            --color-bg: #ffffff;
+            --sidebar-width: 260px;
+            --shadow-soft: 0 10px 40px rgba(0,0,0,0.04);
+            --shadow-hover: 0 20px 60px rgba(0,0,0,0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text-dark);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- BARRA LATERAL --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background-color: #fff;
+            position: fixed;
+            border-right: 1px solid #f2f2f2;
+            padding: 60px 0;
+            z-index: 1000;
+        }
+
+        .brand h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem;
+            color: var(--color-primary);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 60px;
+            line-height: 1.2;
+        }
+
+        .menu-list { list-style: none; }
+        .menu-item {
+            padding: 20px 40px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--color-text-light);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .menu-item i { margin-right: 15px; width: 20px; font-size: 1rem; }
+        .menu-item:hover, .menu-item.active {
+            color: var(--color-primary);
+            background: #fafafa;
+            border-right: 4px solid var(--color-accent);
+        }
+
+        /* --- CONTENIDO PRINCIPAL (MÁS GRANDE) --- */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+            padding: 80px 120px; /* Aumentado el padding lateral */
+            position: relative;
+        }
+
+        .header-minimal { text-align: center; margin-bottom: 100px; }
+        .header-minimal p { font-size: 0.6rem; letter-spacing: 6px; color: var(--color-accent); text-transform: uppercase; margin-bottom: 20px; }
+        .header-minimal h1 { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 500; }
+
+        .btn-container { position: absolute; top: 80px; right: 120px; }
+        .btn-new { background: #000; color: #fff; border: none; padding: 12px 25px; font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: 0.3s; }
+        .btn-new:hover { background: var(--color-accent); }
+
+        /* --- FLECHAS LATERALES (POSITION FIXED CENTRADAS) --- */
+        .nav-btn {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #fff;
+            border: 1px solid #eee;
+            width: 60px; /* Más grandes */
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: #1a1a1a;
+            cursor: pointer;
+            transition: 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            z-index: 500;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .nav-btn:hover { background: #000; color: #fff; transform: translateY(-50%) scale(1.1); }
+        .nav-prev { left: calc(var(--sidebar-width) + 40px); }
+        .nav-next { right: 40px; }
+
+        /* --- GRID SEMANAL ESPACIOSO --- */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 30px; /* Más espacio entre columnas */
+        }
+
+        .day-column { min-height: 500px; }
+        .day-header {
+            padding-bottom: 20px;
+            border-bottom: 2px solid #1a1a1a;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .day-name { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 3px; font-weight: 600; color: var(--color-text-light); }
+        .day-number { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; color: var(--color-primary); }
+
+        /* --- TARJETAS PREMIUM --- */
+        .card {
+            background: #fff;
+            padding: 30px; /* Más grandes */
+            margin-bottom: 25px;
+            border: 1px solid #f0f0f0;
+            box-shadow: var(--shadow-soft);
+            transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+            cursor: pointer;
+        }
+
+        .card:hover { 
+            box-shadow: var(--shadow-hover); 
+            transform: translateY(-10px); 
+            border-color: var(--color-accent); 
+        }
+        
+        .card-tag { font-size: 0.55rem; color: var(--color-accent); text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 15px; display: block; }
+        .card-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; margin-bottom: 15px; font-weight: 600; line-height: 1.3; }
+        .card-time { font-size: 0.65rem; color: #bbb; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* --- MODALES --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.99); 
+            display: none; z-index: 2000; align-items: center; justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content { width: 650px; padding: 80px; text-align: left; }
+        .close-modal { position: absolute; right: 50px; top: 50px; cursor: pointer; font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; }
+
+        input, textarea, select {
+            width: 100%; padding: 20px 0; border: none; border-bottom: 1px solid #eee; margin-bottom: 30px; font-family: inherit; font-size: 1rem; background: transparent;
+        }
+
+
+
+               /* --- VARIABLES CSS & RESET --- */
+        :root {
+            --color-primary: #0f1f3d; 
+            --color-accent: #c5a47e; 
+            --color-text-dark: #2c2c2c;
+            --color-text-light: #666666;
+            --color-bg-light: #f9f9f9;
+            --color-white: #ffffff;
+            --sidebar-width: 260px;
+            --header-height: 60vh; 
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth; 
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--color-text-dark);
+            background-color: var(--color-bg-light);
+            display: flex;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Playfair Display', serif;
+            color: var(--color-text-dark);
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+
+        /* --- MENÚ LATERAL FLOTANTE --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background-color: var(--color-white);
+            position: fixed; /* Esto la hace flotante */
+            top: 0;
+            left: 0;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.1); /* Sombra para que se vea flotando sobre el fondo */
+            z-index: 1000;
+            padding: 20px 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-logo {
+            text-align: center;
+            padding: 20px;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--color-primary);
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 25px;
+            color: var(--color-text-light);
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .menu-item i {
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            color: var(--color-primary);
+            background-color: rgba(0, 51, 102, 0.05);
+            border-left: 4px solid var(--color-primary);
+        }
+
+        .menu-header {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #999;
+            padding: 20px 25px 10px;
+        }
+        
+        .login-btn-container {
+            padding: 20px;
+            margin-top: auto; /* Empuja el botón hacia abajo */
+        }
+
+        .btn-login-sidebar {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--color-primary);
+            color: var(--color-white);
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 10px rgba(0,51,102,0.2);
+        }
+
+        .btn-login-sidebar:hover {
+            background-color: #002244;
+            transform: translateY(-2px);
+        }
+
+        /* --- CONTENEDOR PRINCIPAL --- */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+            min-height: 100vh;
+        }
+
+        /* --- HERO SECTION --- */
+        .hero-section {
+            height: var(--header-height);
+            /* AQUÍ ESTÁ TU IMAGEN LOCAL PARA EL FONDO */
+            background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.4)), url('Imagenes/foto_predro_rofriguez_a.jpeg');
+            background-size: cover;
+            background-position: center 40%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-white);
+            text-align: center;
+        }
+
+        .hero-content h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            color: var(--color-white);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero-content p {
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* --- STICKY NAVIGATION --- */
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            background-color: var(--color-white);
+            padding: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            z-index: 90;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .sticky-nav a {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--color-text-light);
+            font-weight: 600;
+            padding-bottom: 5px;
+            border-bottom: 2px solid transparent;
+        }
+
+        .sticky-nav a:hover {
+            color: var(--color-accent);
+            border-bottom: 2px solid var(--color-accent);
+        }
+
+        /* --- SECCIONES DE CONTENIDO --- */
+        .section {
+            padding: 80px 60px;
+            background-color: var(--color-white);
+        }
+
+        .section:nth-child(even) {
+            background-color: var(--color-bg-light);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .section-header p {
+            color: var(--color-text-light);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* --- SECCIÓN GALERÍA (Más bloques) --- */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-auto-rows: 250px; /* Altura base para los bloques */
+            gap: 15px;
+        }
+
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: 4px;
+            background-color: #eee; /* Color de fondo por si la imagen no carga */
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+            display: block;
+        }
+
+        .item-5 img{
+            object-position: center 25%;
+        }
+
+        .gallery-item:hover img {
+            transform: scale(1.05);
+        }
+
+        /* Mosaico asimétrico con 6 bloques */
+        .item-1 { grid-column: span 2; grid-row: span 2; } /* Foto principal grande */
+        .item-2 { grid-column: span 2; grid-row: span 1; } /* Panorámica arriba derecha */
+        .item-3 { grid-column: span 1; grid-row: span 1; } /* Cuadrada pequeña */
+        .item-4 { grid-column: span 1; grid-row: span 1; background-color: var(--color-primary); color: white; padding: 20px; display: flex; flex-direction: column; justify-content: center;} /* Bloque de texto */
+        .item-5 { grid-column: span 3; grid-row: span 1; } /* Panorámica ancha abajo */
+        .item-6 { grid-column: span 1; grid-row: span 1; } /* Cuadrada pequeña esquina */
+
+        .gallery-text h3 { color: var(--color-white); margin-bottom: 10px; font-size: 1.2rem; }
+        .gallery-text p { font-size: 0.9rem; color: rgba(255,255,255,0.8); }
+
+        /* --- SECCIÓN NOTAS Y RECURSOS --- */
+        .resources-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .resource-card {
+            background: var(--color-white);
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+
+        .resource-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .resource-card i {
+            font-size: 3rem;
+            color: var(--color-accent);
+            margin-bottom: 20px;
+        }
+
+        /* --- MODAL DE LOGIN --- */
+        .modal-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999; /* Z-index altísimo para que esté sobre TODO */
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-container.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-box {
+            background-color: var(--color-white);
+            padding: 40px;
+            border-radius: 8px;
+            width: 400px;
+            max-width: 90%;
+            position: relative;
+            text-align: center;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .modal-container.show .modal-box {
+            transform: translateY(0);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: var(--color-text-dark);
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .login-form button {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--color-primary);
+            color: var(--color-white);
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .login-form button:hover {
+            background-color: #002244;
+        }
+
+        /* Responsive básico */
+        @media (max-width: 1024px) {
+            .gallery-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .item-1, .item-2, .item-5 { grid-column: span 2; }
+            .item-3, .item-4, .item-6 { grid-column: span 1; }
+        }
+
+  /* Responsive básico */
+
+        .login-form select{
+        width:100%;
+        padding:15px;
+        margin-bottom:15px;
+        border:1px solid #ddd;
+        border-radius:4px; 
+        font-family:inherit;
+        background:white;
+        }
+
+.main-logo {
+    width: 80px;      /* 1. CAMBIA EL TAMAÑO AQUÍ */
+    height: auto;     /* Mantiene la proporción */
+    margin-top: -15px;  /* 2. MUÉVELO HACIA ARRIBA/ABAJO AQUÍ */
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.05)); /* Sombras finas */
+    transition: transform 0.3s ease;
+}
+
+.main-logo:hover {
+    transform: scale(1.05); /* Efecto sutil al pasar el mouse */
+}
+
+.logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-primary);
+}
+    </style>
+</head>
+<body>
+
+    <button class="nav-btn nav-prev" onclick="changeWeek(-1)"><i class="fas fa-chevron-left"></i></button>
+    <button class="nav-btn nav-next" onclick="changeWeek(1)"><i class="fas fa-chevron-right"></i></button>
+
+   <nav class="sidebar">
+<div class="brand-logo">
+    <img src="logo.png" alt="Logo Atizapán" class="main-logo">
+    
+    <div class="logo-text">
+        ATIZAPÁN DE ZARAGOZA<br>
+        <span style="font-size: 0.7rem; font-family: 'Montserrat'; color: var(--color-text-light); letter-spacing: 2px;">Sala de Prensa</span>
+    </div>
+</div>
+
+        <div class="menu-header">Navegación</div>
+        
+        <a href="index.html" class="menu-item active">
+            <i class="fas fa-home"></i> Inicio
+        </a>
+        
+        <div class="menu-header">Contenido</div>
+
+        <a href="#notas" class="menu-item">
+            <i class="fas fa-newspaper"></i> Notas de Prensa
+        </a>
+        <a href="#recursos" class="menu-item">
+            <i class="fas fa-images"></i> Recursos
+        </a>
+        <a href="#galeria" class="menu-item">
+            <i class="fas fa-camera-retro"></i> Galería de Imágenes
+        </a>
+        <a href="calendario.html" class="menu-item">
+            <i class="far fa-calendar-alt"></i> Agenda pública
+        </a>
+
+        <a href="#altameduis" class="menu-item" onclick="openregistromedioModal()">
+            <i class="fas fa-file-alt"></i> Registrarme como medio
+        </a>
+
+        <div class="login-btn-container">
+            <button id="loginBtnSidebar" class="btn-login-sidebar" onclick="openModal()">
+                <i class="fas fa-user-lock"></i> Acceso Prensa
+            </button>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="btn-container">
+            <button class="btn-new" onclick="toggleModal('eventModal')">+ Nuevo Evento</button>
+        </div>
+
+        <header class="header-minimal">
+            <p>Agenda Institucional</p>
+            <h1 id="monthDisplay">Marzo 2026</h1>
+        </header>
+
+        <div class="calendar-grid" id="calendarGrid">
+            <div class="day-column" id="col-0"><div class="day-header"><span class="day-name">Lun</span><span class="day-number" id="date-0">--</span></div><div class="day-content"></div></div>
+            <div class="day-column" id="col-1"><div class="day-header"><span class="day-name">Mar</span><span class="day-number" id="date-1">--</span></div><div class="day-content"></div></div>
+            <div class="day-column" id="col-2"><div class="day-header"><span class="day-name">Mié</span><span class="day-number" id="date-2">--</span></div><div class="day-content"></div></div>
+            <div class="day-column" id="col-3"><div class="day-header"><span class="day-name">Jue</span><span class="day-number" id="date-3">--</span></div><div class="day-content"></div></div>
+            <div class="day-column" id="col-4"><div class="day-header"><span class="day-name">Vie</span><span class="day-number" id="date-4">--</span></div><div class="day-content"></div></div>
+            <div class="day-column" id="col-5"><div class="day-header"><span class="day-name">Sáb</span><span class="day-number" id="date-5">--</span></div><div class="day-content"></div></div>
+            <div class="day-column" id="col-6"><div class="day-header"><span class="day-name">Dom</span><span class="day-number" id="date-6">--</span></div><div class="day-content"></div></div>
+        </div>
+    </main>
+
+    <div class="modal" id="detailModal">
+        <div class="modal-content" style="border-left: 15px solid var(--color-accent);">
+            <span class="close-modal" onclick="toggleModal('detailModal')">Regresar [X]</span>
+            <p id="det-tag" style="font-size: 0.7rem; letter-spacing: 3px; color: var(--color-accent); font-weight: 700; margin-bottom: 25px; text-transform: uppercase;"></p>
+            <h2 id="det-title" style="font-family: 'Playfair Display'; font-size: 3rem; margin-bottom: 30px; font-weight: 400; line-height: 1.1;"></h2>
+            <p id="det-desc" style="line-height: 2; color: var(--color-text-light); font-size: 1rem; margin-bottom: 40px; font-weight: 300;"></p>
+            <div style="border-top: 1px solid #eee; padding-top: 30px; font-size: 0.85rem;">
+                <p id="det-time" style="font-weight: 600;"></p>
+                <p id="det-cobertura" style="margin-top: 8px; color: var(--color-accent); font-weight: 500;"></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="eventModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="toggleModal('eventModal')">Cerrar [X]</span>
+            <h2 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin-bottom: 50px; font-weight: 400;">Nuevo Evento</h2>
+            <form id="eventForm">
+                <input type="text" id="title" placeholder="TÍTULO" required>
+                <input type="text" id="tag" placeholder="UBICACIÓN">
+                <textarea id="desc" placeholder="DETALLES" rows="1"></textarea>
+                <input type="text" id="cobertura" placeholder="COBERTURA">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <input type="date" id="eventDate" required>
+                    <input type="text" id="time" placeholder="HORA">
+                </div>
+                <button type="submit" style="width:100%; padding:25px; background:#000; color:#fff; border:none; letter-spacing:4px; cursor:pointer; font-size: 0.75rem; text-transform: uppercase;">Publicar</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // EVENTOS REALES DE LA SEMANA DE MARZO
+        let events = [
+            { date: '2026-03-03', time: '09:00 a.m.', title: 'Mesa de Paz', tag: 'Sala de Cabildos', desc: 'Coordinación de operativos de seguridad.', cobertura: 'JhiiMmy' },
+            { date: '2026-03-03', time: '10:00 a.m.', title: 'Jornada Sigamos creciendo por tu colonia.', tag: 'Paseo Flamingos Esq. Alamedas', desc: 'Atención ciudadana integral.', cobertura: 'Erik, Marco, Sara' },
+            { date: '2026-03-04', time: '09:00 a.m.', title: 'Mesa de Paz', tag: 'Sala de Cabildos', desc: 'Sesión de gabinete municipal.', cobertura: 'Erik' },
+            { date: '2026-03-05', time: '09:00 a.m.', title: 'Mesa de Paz', tag: 'Sala de Cabildos', desc: 'Reunión estratégica diaria.', cobertura: 'JhiiMmy' },
+            { date: '2026-03-06', time: '10:00 a.m.', title: 'Jornada Sigamos Creciendo', tag: 'Lomas de Tepalcapa', desc: 'Calle Rosvel esquina Bulevar Ignacio Zaragoza.', cobertura: 'JhiiMmy, Marco, Andrea' }
+        ];
+
+        let currentMonday = new Date(2026, 2, 2); 
+
+        function updateCalendar() {
+            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            
+            for(let i=0; i<7; i++) {
+                let d = new Date(currentMonday);
+                d.setDate(currentMonday.getDate() + i);
+                let dateStr = d.toISOString().split('T')[0];
+                
+                document.getElementById(`date-${i}`).innerText = d.getDate().toString().padStart(2, '0');
+                const container = document.querySelector(`#col-${i} .day-content`);
+                container.innerHTML = '';
+                
+                events.filter(e => e.date === dateStr).forEach(ev => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.onclick = () => openDetail(ev);
+                    card.innerHTML = `<span class="card-tag">${ev.tag}</span><h3 class="card-title">${ev.title}</h3><p class="card-time">${ev.time}</p>`;
+                    container.appendChild(card);
+                });
+            }
+            document.getElementById('monthDisplay').innerText = `${months[currentMonday.getMonth()]} ${currentMonday.getFullYear()}`;
+        }
+
+        function changeWeek(dir) { currentMonday.setDate(currentMonday.getDate() + (dir * 7)); updateCalendar(); }
+        function toggleModal(id) { document.getElementById(id).classList.toggle('active'); }
+
+        function openDetail(ev) {
+            document.getElementById('det-tag').innerText = ev.tag;
+            document.getElementById('det-title').innerText = ev.title;
+            document.getElementById('det-desc').innerText = ev.desc;
+            document.getElementById('det-time').innerText = "HORARIO: " + ev.time;
+            document.getElementById('det-cobertura').innerText = "COBERTURA: " + ev.cobertura;
+            toggleModal('detailModal');
+        }
+
+        document.getElementById('eventForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            events.push({
+                date: document.getElementById('eventDate').value,
+                time: document.getElementById('time').value || 'Por confirmar',
+                title: document.getElementById('title').value,
+                tag: document.getElementById('tag').value || 'Ubicación pendiente',
+                desc: document.getElementById('desc').value || 'Sin descripción.',
+                cobertura: document.getElementById('cobertura').value || 'Pendiente'
+            });
+            updateCalendar(); toggleModal('eventModal'); this.reset();
+        });
+
+        window.onclick = (e) => { if(e.target.classList.contains('modal')) e.target.classList.remove('active'); }
+        updateCalendar();
+    </script>
+</body>
+</html>
