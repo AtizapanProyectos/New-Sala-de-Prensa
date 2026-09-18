@@ -26,29 +26,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-*bnfuleu3q8tf7bd58=)2v78(%a7w_f7q3u1^c$79og@_o25a@'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# 1. Detección de entorno (Pon esto donde tenías el if anterior)
-if 'runserver' in sys.argv:
-    # --- CONFIGURACIÓN LOCAL ---
-    DEBUG = True
-    ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
-    CSRF_COOKIE_DOMAIN = None
-    SESSION_COOKIE_DOMAIN = None
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
-else:
-    # --- CONFIGURACIÓN PRODUCCIÓN (Nginx) ---
-    DEBUG = True  # Cámbialo a False cuando ya no necesites ver errores
-    ALLOWED_HOSTS = ['prensa.atizapan.gob.mx', 'atizapan.gob.mx']
-    CSRF_COOKIE_DOMAIN = ".atizapan.gob.mx"
-    SESSION_COOKIE_DOMAIN = ".atizapan.gob.mx"
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+DEBUG = True
 
-# 2. Orígenes de confianza (Esto se puede quedar fijo, no estorba en local)
+ALLOWED_HOSTS = [
+    'prensa.atizapan.gob.mx',
+    'atizapan.gob.mx',
+    '.railway.app',
+    '.up.railway.app',
+    'localhost',
+    '127.0.0.1',
+    '*',
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 CSRF_TRUSTED_ORIGINS = [
     'https://prensa.atizapan.gob.mx',
-    'https://*.atizapan.gob.mx'
+    'https://*.atizapan.gob.mx',
+    'https://*.railway.app',
+    'https://*.up.railway.app',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
 ]
 
 # Application definition
@@ -60,11 +58,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'whitenoise.runserver_nostatic',
     'sala',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -146,6 +146,20 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# Configuración de Archivos Multimedia
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR
 
 
 # --- CONFIGURACIÓN PARA ENVIAR CORREOS ---

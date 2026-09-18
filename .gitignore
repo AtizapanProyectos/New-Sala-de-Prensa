@@ -38,3 +38,7 @@ ENV/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Staticfiles collected
+staticfiles/
+*.log
