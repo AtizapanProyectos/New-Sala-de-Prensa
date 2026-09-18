@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Acceso Restringido | Atizapán{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:center; align-items:center; min-height:85vh; background-color:#FAF6F0;">
+    <div style="background:#fff; padding:50px; border-radius:8px; box-shadow:0 15px 30px rgba(0,0,0,0.05); width:100%; max-width:400px; border-top: 5px solid var(--color-primary);">
+        <h2 style="font-family:'Playfair Display', serif; color:var(--color-primary); text-align:center; margin-bottom:30px;">Acceso a Prensa</h2>
+        
+        <form method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+            {% csrf_token %}
+            {{ form.as_p }}
+            
+            <button type="submit" style="padding:15px; background:var(--color-primary); color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer; margin-top: 10px; transition: background 0.3s;">
+                INGRESAR AL SISTEMA
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Estilos para limpiar el formulario por defecto de Django */
+    form p { display: flex; flex-direction: column; font-size: 0.9rem;}
+    form label { font-weight: 600; margin-bottom: 5px; color: var(--color-text-dark); }
+    form input { padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; }
+</style>
+{% endblock %}

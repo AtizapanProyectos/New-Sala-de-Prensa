@@ -1,0 +1,42 @@
+<div class="modal-container" id="loginModal">
+    <div class="modal-box">
+        <span class="close-btn" id="closeModal" onclick="closeModalFunc()">&times;</span>
+        <h2 style="margin-bottom: 20px;">Acceso a Prensa</h2>
+        <p style="margin-bottom: 30px; color: var(--color-text-light);">Ingrese sus credenciales para acceder a material exclusivo.</p>
+        <form class="login-form">
+            <input type="text" placeholder="Correo Electrónico Oficial" required>
+            <input type="password" placeholder="Contraseña" required>
+            <button type="submit">INICIAR SESIÓN</button>
+        </form>
+        <p style="margin-top: 20px; font-size: 0.8rem;"><a href="#" style="color: var(--color-primary);">¿Olvidó su contraseña?</a></p>
+    </div>
+</div>
+
+<div class="modal-container" id="registromedio">
+    <div class="modal-box">
+        <span class="close-btn" onclick="closeregistromedioFunc()">&times;</span>
+        <h2 style="margin-bottom: 20px;">Registro de Medio</h2>
+        <p style="margin-bottom: 30px; color: var(--color-text-light);">Regístrate y accede a la Sala de Prensa Virtual.</p>
+<form class="login-form" method="POST" action="{% url 'registro_medio' %}">
+    {% csrf_token %}
+    <input type="text" name="Nombre" placeholder="Nombre del periodista" required>
+    <input type="text" name="Nombre_del_medio" placeholder="Nombre del medio" required>
+
+    <select name="Tipo_de_medio" required>
+        <option value="">Tipo de medio</option>
+        <option>Digital</option>
+        <option>Impreso</option>
+        <option>Radio</option>
+        <option>Televisión</option>
+        <option>Agencia de Noticias</option>
+        <option>Medio independiente</option>
+    </select>
+
+    <input type="email" name="Correo" placeholder="Correo de contacto" required>
+    <input type="tel" name="Telefono" placeholder="Teléfono de contacto" required>
+
+    <button type="submit">Enviar registro</button>
+</form>
+
+    </div>
+</div>

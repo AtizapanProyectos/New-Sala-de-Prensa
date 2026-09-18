@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Banco de Recursos | Atizapán{% endblock %}
+
+{% block content %}
+<style>
+    /* --- DISEÑO FRANCÉS: BANCO DE RECURSOS --- */
+    .recursos-container {
+        background-color: #FAF6F0; /* Color crema elegante */
+        min-height: 100vh;
+        padding: 80px 60px;
+    }
+
+    .recursos-header {
+        text-align: center;
+        margin-bottom: 60px;
+    }
+
+    .recursos-header p { 
+        font-size: 0.9rem; 
+        letter-spacing: 5px; 
+        text-transform: uppercase; 
+        color: var(--color-accent); 
+        margin-bottom: 15px; 
+        font-weight: 600; 
+    }
+
+    .recursos-header h1 { 
+        font-family: 'Playfair Display', serif; 
+        font-size: 3.5rem; 
+        color: var(--color-primary); 
+        font-style: italic; 
+    }
+
+    /* Grilla tipo Masonry/Feed */
+    .feed-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 35px;
+    }
+
+    .feed-card {
+        background: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+        cursor: pointer;
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+        border-bottom: 5px solid transparent;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .feed-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px rgba(15, 31, 61, 0.1);
+        border-bottom: 5px solid var(--color-accent);
+    }
+
+    .feed-img-wrapper {
+        width: 100%;
+        height: 220px;
+        overflow: hidden;
+        background-color: #eee;
+    }
+
+    .feed-img-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s ease;
+    }
+
+    .feed-card:hover .feed-img-wrapper img {
+        transform: scale(1.05);
+    }
+
+    .feed-content {
+        padding: 25px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .feed-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .feed-tag {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--color-accent);
+        font-weight: bold;
+    }
+
+    .feed-date {
+        font-size: 0.8rem;
+        color: #888;
+        font-family: 'Montserrat', sans-serif;
+    }
+
+    .feed-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.4rem;
+        color: var(--color-primary);
+        line-height: 1.3;
+        margin-bottom: 15px;
+    }
+
+    .feed-btn {
+        margin-top: auto; /* Empuja el botón al fondo */
+        align-self: flex-start;
+        background: transparent;
+        color: var(--color-primary);
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 2px solid var(--color-accent);
+        padding-bottom: 3px;
+    }
+
+    /* Modal Ultra Elegante (Reutilizado del calendario) */
+    .modal-fr { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 31, 61, 0.9); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+    .modal-fr.active { display: flex; }
+    .modal-content-fr { background: #FAF6F0; padding: 50px; max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto; border-radius: 6px; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.3); }
+    
+    .btn-descarga { display: inline-block; background: var(--color-primary); color: white; padding: 12px 25px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; font-weight: bold; margin-top: 20px; transition: background 0.3s; }
+    .btn-descarga:hover { background: var(--color-accent); color: white;}
+    
+    .btn-pack { display: inline-block; background: var(--color-accent); color: white; padding: 12px 25px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; font-weight: bold; margin-top: 20px; margin-left: 10px; transition: background 0.3s; box-shadow: 0 4px 10px rgba(197, 164, 126, 0.3); }
+    .btn-pack:hover { background: #a87b25; color: white; transform: translateY(-2px);}
+
+    .modal-galeria { display: flex; gap: 10px; margin-top: 20px; overflow-x: auto; padding-bottom: 10px;}
+    .modal-galeria img { width: 120px; height: 80px; object-fit: cover; border-radius: 4px; border: 2px solid #ddd; cursor: pointer; transition: border 0.3s;}
+    .modal-galeria img:hover { border: 2px solid var(--color-accent); }
+</style>
+
+<div class="recursos-container">
+    <div class="recursos-header">
+        <p>Archivo General</p>
+        <h1>Banco de Recursos para Prensa</h1>
+    </div>
+
+    <div class="feed-grid" id="feedGrid">
+        </div>
+</div>
+
+<div class="modal-fr" id="detailModal">
+    <div class="modal-content-fr">
+        <span onclick="toggleModal('detailModal')" style="position:absolute; top:20px; right:30px; font-size:1.5rem; cursor:pointer; color:#999;">&times;</span>
+        
+        <p id="det-tag" style="font-size: 0.8rem; letter-spacing: 3px; color: var(--color-accent); font-weight: 700; margin-bottom: 15px; text-transform: uppercase;"></p>
+        <h2 id="det-title" style="font-family: 'Playfair Display'; font-size: 2.5rem; color: var(--color-primary); margin-bottom: 20px; line-height: 1.1;"></h2>
+        
+        <div id="det-descargas" style="margin-bottom: 25px;"></div>
+
+        <img id="det-img" src="" alt="Portada" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; margin-bottom: 20px; display: none; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+
+        <p id="det-desc" style="line-height: 1.8; color: #444; font-size: 1.1rem; margin-bottom: 30px; border-left: 4px solid var(--color-accent); padding-left: 20px; white-space: pre-wrap;"></p>
+        
+        <h4 id="galeria-title" style="display:none; font-family: 'Montserrat'; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 2px; color: var(--color-primary);">Material Fotográfico Adicional</h4>
+        <div id="det-galeria" class="modal-galeria"></div>
+    </div>
+</div>
+
+<script>
+    const events = {{ eventos_json|safe }};
+    const feedGrid = document.getElementById('feedGrid');
+
+    // Función para renderizar todas las tarjetas en la grilla
+    function renderFeed() {
+        if (events.length === 0) {
+            feedGrid.innerHTML = '<p style="text-align:center; grid-column: 1 / -1; color:#888;">No hay recursos disponibles por el momento.</p>';
+            return;
+        }
+
+        events.forEach(ev => {
+            const card = document.createElement('div');
+            card.className = 'feed-card';
+            card.onclick = () => openDetail(ev);
+            
+            // Imagen por defecto si no hay portada
+            const imgSrc = ev.imagen ? ev.imagen : '{% static "imagenes/foto_predro_rofriguez_a.jpeg" %}';
+
+            card.innerHTML = `
+                <div class="feed-img-wrapper">
+                    <img src="${imgSrc}" alt="${ev.title}">
+                </div>
+                <div class="feed-content">
+                    <div class="feed-meta">
+                        <span class="feed-tag">${ev.tag}</span>
+                        <span class="feed-date"><i class="far fa-calendar-alt"></i> ${ev.date}</span>
+                    </div>
+                    <h3 class="feed-title">${ev.title}</h3>
+                    <span class="feed-btn">Ver Materiales &rarr;</span>
+                </div>
+            `;
+            feedGrid.appendChild(card);
+        });
+    }
+
+    function toggleModal(id) { document.getElementById(id).classList.toggle('active'); }
+
+    // Función para llenar y abrir el modal
+    function openDetail(ev) {
+        document.getElementById('det-tag').innerText = ev.date + ' | ' + ev.tag;
+        document.getElementById('det-title').innerText = ev.title;
+        document.getElementById('det-desc').innerText = ev.contenido;
+        
+        const imgElement = document.getElementById('det-img');
+        if (ev.imagen) {
+            imgElement.src = ev.imagen;
+            imgElement.style.display = 'block';
+        } else {
+            imgElement.style.display = 'none';
+        }
+
+        // Manejo de Botones de Descarga
+        const descargasDiv = document.getElementById('det-descargas');
+        descargasDiv.innerHTML = '';
+        
+        if(ev.documento_url){
+            descargasDiv.innerHTML += `<a href="${ev.documento_url}" download class="btn-descarga"><i class="fas fa-file-word"></i> Word</a>`;
+        }
+        
+        // ¡El botón mágico del ZIP!
+        descargasDiv.innerHTML += `<a href="/agenda/descargar-pack/${ev.id}/" class="btn-pack"><i class="fas fa-file-archive"></i> Descargar Pack ZIP</a>`;
+
+        // Manejo de la Galería
+        const galeriaDiv = document.getElementById('det-galeria');
+        const galeriaTitle = document.getElementById('galeria-title');
+        galeriaDiv.innerHTML = '';
+        
+        if(ev.galeria && ev.galeria.length > 0){
+            galeriaTitle.style.display = 'block';
+            ev.galeria.forEach(url => {
+                galeriaDiv.innerHTML += `<img src="${url}" onclick="document.getElementById('det-img').src='${url}'" alt="Foto galería">`;
+            });
+        } else {
+            galeriaTitle.style.display = 'none';
+        }
+
+        toggleModal('detailModal');
+    }
+
+    // Cerrar modal al dar clic afuera
+    window.onclick = (e) => { 
+        if(e.target.classList.contains('modal-fr')) {
+            e.target.classList.remove('active'); 
+        }
+    }
+
+    // Ejecutar renderizado al cargar
+    renderFeed();
+</script>
+{% endblock %}

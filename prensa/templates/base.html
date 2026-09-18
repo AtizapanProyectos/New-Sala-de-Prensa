@@ -1,0 +1,277 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sala de Prensa | Atizapán de Zaragoza{% endblock %}</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    <style>
+        /* --- DISEÑO ULTRA LIMPIO Y MODERNO --- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 31, 61, 0.4); /* Fondo menos agresivo */
+            backdrop-filter: blur(12px); /* Mucho desenfoque para resaltar la caja */
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-box-clean {
+            background: #ffffff;
+            padding: 50px 40px;
+            width: 100%;
+            max-width: 420px;
+            border-radius: 16px; /* Bordes suaves */
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1); /* Sombra elegante */
+            text-align: center;
+            position: relative;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-box-clean {
+            transform: scale(1);
+        }
+
+        .close-clean {
+            position: absolute;
+            top: 20px; right: 25px;
+            font-size: 1.5rem;
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close-clean:hover {
+            color: var(--color-primary);
+        }
+
+        .modal-box-clean h2 {
+            font-family: 'Playfair Display', serif;
+            color: var(--color-primary);
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+        }
+
+        .modal-box-clean p.desc {
+            font-family: 'Montserrat', sans-serif;
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .input-clean {
+            width: 100%;
+            padding: 16px 20px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.95rem;
+            color: #333;
+            transition: all 0.3s;
+        }
+
+        .input-clean:focus {
+            outline: none;
+            background: #ffffff;
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 4px rgba(197, 164, 126, 0.15);
+        }
+
+        .btn-clean {
+            background: var(--color-primary);
+            color: #fff;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+            margin-top: 10px;
+        }
+
+        .btn-clean:hover {
+            background: var(--color-accent);
+        }
+        
+        .btn-clean:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+        <div class="brand-logo">
+            <img src="{% static 'imagenes/logo.png' %}" alt="Logo Atizapán de Zaragoza" style="max-width: 110px; height: auto; margin-bottom: 10px;"><br>
+            
+            ATIZAPÁN DE ZARAGOZA<br>
+            <span style="font-size: 0.8rem; font-family: 'Montserrat'; color: var(--color-text-light);">Sala de Prensa</span>
+        </div>
+
+    <div class="menu-header">Navegación</div>
+        <a href="{% url 'inicio' %}" class="menu-item active"><i class="fas fa-home"></i> Inicio</a>
+        
+        <div class="menu-header">Contenido</div>
+        
+        <a href="{% url 'inicio' %}#notas" class="menu-item"><i class="fas fa-newspaper"></i> Notas de Prensa</a>
+        
+        {% if user.is_authenticated %}
+        <a href="{% url 'recursos' %}" class="menu-item"><i class="fas fa-images"></i> Recursos de Prensa</a>
+        {% endif %}
+        
+        <a href="{% url 'inicio' %}#galeria" class="menu-item"><i class="fas fa-camera-retro"></i> Galería de Imágenes</a>
+        
+        {% if user.is_authenticated %}
+        <a href="{% url 'calendario' %}" class="menu-item"><i class="far fa-calendar-alt"></i> Agenda pública</a>
+        {% endif %} 
+
+        {% if not user.is_authenticated %}
+            <a href="#altameduis" class="menu-item" onclick="openregistromedioModal()">
+                <i class="fas fa-file-alt"></i> Registrarme Como Medio
+            </a>
+
+            <div class="login-btn-container" style="margin-top: 20px;">
+                <button id="loginBtnSidebar" class="btn-login-sidebar" onclick="openModal()">
+                    <i class="fas fa-user-lock"></i> Acceso Prensa
+                </button>
+            </div>
+            
+        {% else %}
+            <div class="login-btn-container" style="margin-top: 20px;">
+                <a href="{% url 'logout' %}" class="btn-login-sidebar" style="background-color: #dc2626; color: white; text-align: center; display: flex; justify-content: center; align-items: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: bold;">
+                    <i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i> Cerrar Sesión
+                </a>
+            </div>
+        {% endif %}
+        
+    </nav>
+
+    <main class="main-content">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    {% if not user.is_authenticated %}
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-box-clean">
+            <span class="close-clean" onclick="closeModalFunc()"><i class="fas fa-times"></i></span>
+            <h2>Bienvenido</h2>
+            <p class="desc">Ingresa tus credenciales de prensa</p>
+            
+            {% if messages %}
+            <div style="background-color: #fee2e2; color: #dc2626; padding: 12px; margin-bottom: 20px; font-size: 0.85rem; border-radius: 6px; text-align: center;">
+                {% for message in messages %}
+                    {{ message }}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{% url 'inicio' %}">
+                {% csrf_token %}
+                <input type="hidden" name="login_submit" value="1">
+                
+                <div class="input-group">
+                    <input type="text" name="username" class="input-clean" placeholder="Correo electrónico" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" name="password" class="input-clean" placeholder="Contraseña" required>
+                </div>
+                
+                <button type="submit" class="btn-clean">Entrar a la sala</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% include 'partials/modals.html' %} 
+
+    <script>
+        function openModal() { 
+            const loginM = document.getElementById('loginModal');
+            if(loginM) loginM.classList.add('active'); 
+        }
+        
+        function closeModalFunc() { 
+            const loginM = document.getElementById('loginModal');
+            if(loginM) loginM.classList.remove('active'); 
+        }
+
+        function openregistromedioModal() { 
+            const rm = document.getElementById('registromedio');
+            if(rm) rm.classList.add('show'); 
+        }
+        
+        function closeregistromedioFunc() { 
+            const rm = document.getElementById('registromedio');
+            if(rm) rm.classList.remove('show'); 
+        }
+
+        window.addEventListener('click', (e) => {
+            const loginM = document.getElementById('loginModal');
+            const rm = document.getElementById('registromedio');
+            
+            if (loginM && e.target === loginM) closeModalFunc();
+            if (rm && e.target === rm) closeregistromedioFunc();
+        });
+
+        const menuItems = document.querySelectorAll('.menu-item');
+        menuItems.forEach(item => {
+            item.addEventListener('click', function() {
+                menuItems.forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        {% if messages and not user.is_authenticated %}
+        window.onload = function() {
+            openModal();
+        };
+        {% endif %}
+    </script>
+
+    <script src="https://ai-atizapan-614216059162.us-central1.run.app/widget/fwc-widget.min.js"></script>
+    <script>
+        window.addEventListener("load", function(){
+            if(typeof ChatWidget !== "undefined"){
+                ChatWidget.init({
+                    title: "Atizapán",
+                    allowHTML: true,
+                    botAvatar: "https://ai-atizapan-614216059162.us-central1.run.app/widget/logoat.png",
+                    placeholder: "Escribe tu mensaje…",
+                    accentColor: "#0f1f3d",
+                    theme: "light",
+                    position: "bottom-right",
+                    offsets: { bottom: 20, right: 20, left: 280, top: 16 },
+                    width: 360, height: 560
+                });
+            }
+        });
+    </script>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+ 
+</html>
