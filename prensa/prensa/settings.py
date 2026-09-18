@@ -141,7 +141,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 # Esto le dice a Django dónde buscar los archivos estáticos globales
 STATICFILES_DIRS = [
     BASE_DIR / "static",
@@ -158,7 +158,7 @@ STORAGES = {
 }
 
 # Configuración de Archivos Multimedia
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR
 
 

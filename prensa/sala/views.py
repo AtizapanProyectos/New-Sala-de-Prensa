@@ -41,14 +41,16 @@ def index(request):
     # Buscamos los 3 eventos más recientes (ordenados por fecha descendente)
     ultimas_noticias = Evento.objects.all().order_by('-fecha', '-id')[:3]
     
-    # --- GALERÍA INSTITUCIONAL DINÁMICA ---
-    # Obtenemos los últimos boletines para extraer sus fotos
-    ultimos_boletines = Evento.objects.all().order_by('-fecha', '-id')[:15]
+    # --- GALERÍA INSTITUCIONAL DINÁMICA CON FOTOS DE BOLETINES ---
     pool_fotos = []
     vistos = set()
 
-    # 1. Fotos de portada de los últimos boletines
-    for ev in ultimos_boletines:
+    # 1. Portadas de los boletines más recientes
+    boletines_con_portada = Evento.objects.filter(
+        imagen_portada__isnull=False
+    ).exclude(imagen_portada='').order_by('-fecha', '-id')[:10]
+
+    for ev in boletines_con_portada:
         if ev.imagen_portada and ev.imagen_portada.name:
             try:
                 url = ev.imagen_portada.url
@@ -63,12 +65,12 @@ def index(request):
             except Exception:
                 pass
 
-    # 2. Fotos de galerías asociadas a los últimos boletines
-    fotos_galeria_db = ImagenEvento.objects.filter(
-        evento__in=ultimos_boletines
-    ).exclude(imagen='').exclude(imagen__isnull=True).select_related('evento')
+    # 2. Fotos de galerías asociadas a boletines recientes
+    fotos_galeria = ImagenEvento.objects.select_related('evento').exclude(
+        imagen=''
+    ).exclude(imagen__isnull=True).order_by('-evento__fecha', '-id')[:20]
 
-    for img_obj in fotos_galeria_db:
+    for img_obj in fotos_galeria:
         if img_obj.imagen and img_obj.imagen.name:
             try:
                 url = img_obj.imagen.url
@@ -76,20 +78,18 @@ def index(request):
                     vistos.add(url)
                     pool_fotos.append({
                         'url': url,
-                        'titulo': img_obj.evento.titulo or 'Evento Institucional',
-                        'fecha': img_obj.evento.fecha.strftime('%d/%m/%Y') if img_obj.evento.fecha else '',
-                        'evento_id': img_obj.evento.id
+                        'titulo': (img_obj.evento.titulo if img_obj.evento else None) or 'Galería Institucional',
+                        'fecha': (img_obj.evento.fecha.strftime('%d/%m/%Y') if img_obj.evento and img_obj.evento.fecha else ''),
+                        'evento_id': img_obj.evento.id if img_obj.evento else None
                     })
             except Exception:
                 pass
 
-    # 3. Selección aleatoria de 5 fotografías para el mosaico
-    if len(pool_fotos) >= 5:
-        galeria_fotos = random.sample(pool_fotos, 5)
-    else:
-        galeria_fotos = list(pool_fotos)
-        random.shuffle(galeria_fotos)
-        # Respaldo institucional por si aún hay pocas fotos en la BD
+    # 3. Tomar las 5 fotos más recientes de los boletines publicados
+    galeria_fotos = pool_fotos[:5]
+
+    # Únicamente si hay menos de 5 fotos registradas, rellenar con respaldos institucionales
+    if len(galeria_fotos) < 5:
         fallbacks = [
             {'url': static('imagenes/galeria_foto_0.jpeg'), 'titulo': 'Evento Institucional'},
             {'url': static('imagenes/galeria_foto_2.jpeg'), 'titulo': 'Obra Pública Municipal'},
