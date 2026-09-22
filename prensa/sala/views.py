@@ -1,4 +1,5 @@
-from django.shortcuts import render, redirect
+from django.db import transaction
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login as auth_login, authenticate, logout
 from django.contrib.auth.forms import AuthenticationForm
@@ -20,7 +21,7 @@ import zipfile
 import io
 import random
 from django.templatetags.static import static
-from django.shortcuts import render, redirect, get_object_or_404
+
 
 
 def index(request):
@@ -476,3 +477,184 @@ def galeria_recursos(request):
     eventos_json = json.dumps(lista_eventos)
     # Mandamos la lista a nuestro nuevo archivo HTML
     return render(request, 'recursos.html', {'eventos_json': eventos_json})
+
+
+def procesar_documento_boletin(file_obj, default_ubicacion='Atizapán de Zaragoza', default_cobertura='General'):
+    """
+    Extrae de forma robusta e inteligente los datos de un archivo Word (.docx):
+    - Título (primer párrafo sustancial, limpiado y recortado para no exceder max_length=500)
+    - Fecha (detectada por regex de fechas en español en los párrafos o fallback a hoy)
+    - Descripción (párrafo introductorio de la nota)
+    - Contenido (cuerpo completo de la nota estructurado)
+    - Imágenes incrustadas (primera como portada, el resto como galería en ImagenEvento)
+    - Guarda el archivo Word original adjunto al Evento
+    """
+    doc = Document(file_obj)
+    
+    # 1. Párrafos con texto no vacío
+    parrafos = [p.text.strip() for p in doc.paragraphs if p.text and p.text.strip()]
+    if not parrafos:
+        raise ValueError("El documento Word no contiene texto o está vacío.")
+
+    # 2. Extracción inteligente de Título
+    titulo = parrafos[0]
+    idx_inicio_cuerpo = 1
+    
+    # Comprobar si parrafos[0] es solo encabezado ("BOLETÍN 123", "COMUNICADO", etc.)
+    if len(parrafos) > 1 and re.match(r'^(bolet[ií]n|comunicado|prensa)\b', parrafos[0].lower()):
+        posible_titulo = f"{parrafos[0]} - {parrafos[1]}"
+        titulo = posible_titulo if len(posible_titulo) <= 450 else parrafos[1]
+        idx_inicio_cuerpo = 2
+    
+    # Limitar longitud para evitar error con max_length=500 de Django
+    if len(titulo) > 480:
+        titulo = titulo[:477] + "..."
+
+    # 3. Extracción de Fecha mediante regex en español en los primeros párrafos
+    fecha_final = datetime.today().date()
+    meses = {
+        'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 'mayo': 5, 'junio': 6,
+        'julio': 7, 'agosto': 8, 'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+    }
+    date_regex = re.compile(r'(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+de\s+(\d{4})', re.IGNORECASE)
+    
+    for p in parrafos[:10]:
+        m = date_regex.search(p.lower())
+        if m:
+            try:
+                dia = int(m.group(1))
+                nom_mes = m.group(2).lower()
+                anio = int(m.group(3))
+                if nom_mes in meses and 1 <= dia <= 31 and 2000 <= anio <= 2100:
+                    fecha_final = datetime(anio, meses[nom_mes], dia).date()
+                    break
+            except Exception:
+                pass
+
+    # 4. Descripción y Contenido Completo
+    cuerpo_parrafos = parrafos[idx_inicio_cuerpo:]
+    # Descartar párrafos cortos que solo contengan fecha o firma
+    cuerpo_parrafos_filtrados = [
+        p for p in cuerpo_parrafos 
+        if not (len(p) < 80 and date_regex.search(p.lower()) and not p.endswith('.'))
+    ]
+    
+    if cuerpo_parrafos_filtrados:
+        descripcion = cuerpo_parrafos_filtrados[0]
+        contenido = "\n\n".join(cuerpo_parrafos_filtrados)
+    else:
+        descripcion = titulo
+        contenido = "\n\n".join(parrafos)
+
+    # 5. Extracción de imágenes incrustadas en el docx
+    imagenes_docx = []
+    try:
+        for rel in doc.part.rels.values():
+            if "image" in rel.target_ref:
+                img_part = rel.target_part
+                img_bytes = img_part.blob
+                ext = img_part.content_type.split('/')[-1]
+                if ext.lower() == 'jpeg':
+                    ext = 'jpg'
+                imagenes_docx.append({'bytes': img_bytes, 'ext': ext})
+    except Exception as img_err:
+        print("Aviso al extraer imágenes del docx:", img_err)
+
+    # 6. Creación del Evento
+    evento = Evento(
+        titulo=titulo,
+        fecha=fecha_final,
+        ubicacion=default_ubicacion or "Atizapán de Zaragoza",
+        cobertura=default_cobertura or "General",
+        descripcion=descripcion,
+        contenido=contenido
+    )
+    
+    # Asignar la primera foto como portada
+    if imagenes_docx:
+        portada_data = imagenes_docx.pop(0)
+        nombre_portada = f"portada_auto_{uuid.uuid4().hex[:8]}.{portada_data['ext']}"
+        evento.imagen_portada.save(nombre_portada, ContentFile(portada_data['bytes']), save=False)
+
+    # Guardar el archivo Word original
+    try:
+        file_obj.seek(0)
+    except Exception:
+        pass
+    nombre_doc = getattr(file_obj, 'name', f"boletin_{uuid.uuid4().hex[:8]}.docx")
+    evento.documento.save(nombre_doc, file_obj, save=False)
+
+    evento.save()
+
+    # Guardar el resto de fotos en ImagenEvento (galería del boletín)
+    for i, img_data in enumerate(imagenes_docx):
+        nombre_galeria = f"galeria_auto_{evento.id}_{i}_{uuid.uuid4().hex[:6]}.{img_data['ext']}"
+        nueva_img = ImagenEvento(evento=evento)
+        nueva_img.imagen.save(nombre_galeria, ContentFile(img_data['bytes']))
+
+    total_imagenes = (1 if evento.imagen_portada else 0) + len(imagenes_docx)
+    return evento, total_imagenes
+
+
+@login_required(login_url='inicio')
+def carga_masiva_boletines(request):
+    """
+    Renderiza la vista de administración para subir y procesar lotes de boletines en Word.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, 'Acceso denegado. Solo los administradores pueden acceder a la carga masiva.')
+        return redirect('inicio')
+    return render(request, 'carga_masiva.html')
+
+
+@login_required(login_url='inicio')
+def procesar_boletin_individual(request):
+    """
+    Endpoint AJAX para procesar un único archivo Word a la vez dentro de la cola de carga masiva.
+    Garantiza aislamiento, previene timeouts de servidor y transacciones atómicas seguras.
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Acceso no autorizado.'}, status=403)
+        
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método HTTP no permitido.'}, status=405)
+
+    archivo = request.FILES.get('documento') or request.FILES.get('file')
+    if not archivo:
+        return JsonResponse({'success': False, 'error': 'No se recibió ningún archivo.'}, status=400)
+
+    nombre_archivo = archivo.name
+    if not nombre_archivo.lower().endswith('.docx'):
+        return JsonResponse({
+            'success': False, 
+            'nombre_archivo': nombre_archivo,
+            'error': f'Formato no compatible en "{nombre_archivo}". Sube archivos en formato Word (.docx).'
+        }, status=400)
+
+    ubicacion = request.POST.get('ubicacion', 'Atizapán de Zaragoza').strip() or 'Atizapán de Zaragoza'
+    cobertura = request.POST.get('cobertura', 'General').strip() or 'General'
+
+    try:
+        with transaction.atomic():
+            evento, total_fotos = procesar_documento_boletin(
+                file_obj=archivo,
+                default_ubicacion=ubicacion,
+                default_cobertura=cobertura
+            )
+
+        return JsonResponse({
+            'success': True,
+            'id': evento.id,
+            'titulo': evento.titulo,
+            'fecha': evento.fecha.strftime('%d/%m/%Y') if evento.fecha else '',
+            'portada_url': evento.imagen_portada.url if evento.imagen_portada else None,
+            'total_fotos': total_fotos,
+            'nombre_archivo': nombre_archivo,
+            'message': 'Boletín publicado exitosamente en Sala de Prensa'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'nombre_archivo': nombre_archivo,
+            'error': f'Error al procesar "{nombre_archivo}": {str(e)}'
+        }, status=500)
