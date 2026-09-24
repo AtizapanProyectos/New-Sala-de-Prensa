@@ -14,4 +14,11 @@ urlpatterns = [
     path('agenda/extraer-word/', views.extraer_datos_word, name='extraer_word'),
     path('agenda/descargar-pack/<int:evento_id>/', views.descargar_pack_medios, name='descargar_pack'),
     path('recursos/', views.galeria_recursos, name='recursos'),
+    # Endpoints Administrativos (Super Admin)
+    path('agenda/evento/<int:evento_id>/editar/', views.editar_evento_api, name='editar_evento_api'),
+    path('agenda/evento/<int:evento_id>/seleccionar-portada/', views.seleccionar_portada_api, name='seleccionar_portada_api'),
+    path('agenda/evento/<int:evento_id>/subir-fotos/', views.subir_foto_galeria_api, name='subir_foto_galeria_api'),
+    path('agenda/foto/<int:imagen_id>/eliminar/', views.eliminar_foto_galeria_api, name='eliminar_foto_galeria_api'),
+    path('agenda/evento/<int:evento_id>/mover-fecha/', views.mover_fecha_evento_api, name='mover_fecha_evento_api'),
+    path('agenda/evento/<int:evento_id>/eliminar/', views.eliminar_evento_api, name='eliminar_evento_api'),
 ]

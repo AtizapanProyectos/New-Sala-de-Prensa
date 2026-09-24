@@ -120,11 +120,13 @@ def calendario(request):
     
     for ev in eventos_db:
         fotos_extra_urls = [img.imagen.url for img in ev.galeria.all()]
+        galeria_detallada = [{'id': img.id, 'url': img.imagen.url} for img in ev.galeria.all()]
         
         lista_eventos.append({
-            'id': ev.id, # <--- ¡AÑADE ESTA LÍNEA!
+            'id': ev.id,
             'date': ev.fecha.strftime('%Y-%m-%d') if ev.fecha else '', 
             'time': ev.hora.strftime('%I:%M %p') if ev.hora else '',
+            'time_raw': ev.hora.strftime('%H:%M') if ev.hora else '',
             'title': ev.titulo if ev.titulo else 'Evento sin título',
             'tag': ev.ubicacion if ev.ubicacion else 'Ubicación pendiente',
             'desc': ev.descripcion if ev.descripcion else 'Sin descripción.',
@@ -132,6 +134,7 @@ def calendario(request):
             'imagen': ev.imagen_portada.url if ev.imagen_portada else None,
             'documento_url': ev.documento.url if ev.documento else None,
             'galeria': fotos_extra_urls,
+            'galeria_detallada': galeria_detallada,
             'contenido': ev.contenido if ev.contenido else ev.descripcion,
         })
     
@@ -657,4 +660,254 @@ def procesar_boletin_individual(request):
             'success': False,
             'nombre_archivo': nombre_archivo,
             'error': f'Error al procesar "{nombre_archivo}": {str(e)}'
-        }, status=500)
+        }, status=500)
+
+
+# ==========================================
+# ENDPOINTS ADMINISTRATIVOS (SUPER ADMIN)
+# ==========================================
+
+@login_required(login_url='inicio')
+def editar_evento_api(request, evento_id):
+    """
+    Permite al Super Admin editar todos los campos de un boletín o evento:
+    título, fecha, hora, ubicación, cobertura, descripción y contenido.
+    También permite reemplazar la imagen de portada directamente.
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Acceso denegado. Se requieren permisos de Super Admin.'}, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método HTTP no permitido.'}, status=405)
+        
+    evento = get_object_or_404(Evento, id=evento_id)
+    
+    titulo = request.POST.get('titulo')
+    fecha_str = request.POST.get('fecha')
+    hora_str = request.POST.get('hora')
+    ubicacion = request.POST.get('ubicacion')
+    cobertura = request.POST.get('cobertura')
+    descripcion = request.POST.get('descripcion')
+    contenido = request.POST.get('contenido')
+    
+    if titulo is not None:
+        evento.titulo = titulo.strip()
+    if ubicacion is not None:
+        evento.ubicacion = ubicacion.strip()
+    if cobertura is not None:
+        evento.cobertura = cobertura.strip()
+    if descripcion is not None:
+        evento.descripcion = descripcion.strip()
+    if contenido is not None:
+        evento.contenido = contenido.strip()
+        
+    if fecha_str:
+        try:
+            evento.fecha = datetime.strptime(fecha_str.strip(), '%Y-%m-%d').date()
+        except ValueError:
+            pass
+            
+    if hora_str is not None:
+        hora_limpia = hora_str.strip()
+        if hora_limpia:
+            try:
+                evento.hora = datetime.strptime(hora_limpia, '%H:%M').time()
+            except ValueError:
+                try:
+                    evento.hora = datetime.strptime(hora_limpia, '%H:%M:%S').time()
+                except ValueError:
+                    pass
+        else:
+            evento.hora = None
+        
+    selected_imagen_id = request.POST.get('selected_imagen_id')
+    if selected_imagen_id:
+        try:
+            img_obj = ImagenEvento.objects.get(id=selected_imagen_id, evento=evento)
+            evento.imagen_portada.name = img_obj.imagen.name
+        except (ImagenEvento.DoesNotExist, ValueError):
+            pass
+
+    if 'imagen_portada' in request.FILES:
+        evento.imagen_portada = request.FILES['imagen_portada']
+        
+    evento.save()
+    
+    fotos_extra_urls = [img.imagen.url for img in evento.galeria.all()]
+    galeria_detallada = [{'id': img.id, 'url': img.imagen.url} for img in evento.galeria.all()]
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Noticia actualizada correctamente.',
+        'evento': {
+            'id': evento.id,
+            'title': evento.titulo,
+            'date': evento.fecha.strftime('%Y-%m-%d') if evento.fecha else '',
+            'time': evento.hora.strftime('%I:%M %p') if evento.hora else '',
+            'time_raw': evento.hora.strftime('%H:%M') if evento.hora else '',
+            'tag': evento.ubicacion if evento.ubicacion else '',
+            'cobertura': evento.cobertura if evento.cobertura else '',
+            'desc': evento.descripcion if evento.descripcion else '',
+            'contenido': evento.contenido if evento.contenido else evento.descripcion,
+            'imagen': evento.imagen_portada.url if evento.imagen_portada else None,
+            'documento_url': evento.documento.url if evento.documento else None,
+            'galeria': fotos_extra_urls,
+            'galeria_detallada': galeria_detallada,
+        }
+    })
+
+
+@login_required(login_url='inicio')
+def seleccionar_portada_api(request, evento_id):
+    """
+    Permite al Super Admin elegir qué imagen de la galería será la portada oficial
+    de la noticia, o subir una nueva portada directamente.
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Acceso denegado.'}, status=403)
+        
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido.'}, status=405)
+        
+    evento = get_object_or_404(Evento, id=evento_id)
+    
+    # 1. Asignar una imagen existente de la galería como portada
+    imagen_id = request.POST.get('imagen_id')
+    if imagen_id:
+        img_obj = get_object_or_404(ImagenEvento, id=imagen_id, evento=evento)
+        # Asignar la ruta de imagen existente al campo imagen_portada
+        evento.imagen_portada.name = img_obj.imagen.name
+        evento.save()
+        return JsonResponse({
+            'success': True,
+            'nueva_portada_url': evento.imagen_portada.url,
+            'message': '¡Foto de portada actualizada exitosamente!'
+        })
+        
+    # 2. Subir una nueva foto directamente como portada
+    if 'nueva_portada' in request.FILES:
+        evento.imagen_portada = request.FILES['nueva_portada']
+        evento.save()
+        return JsonResponse({
+            'success': True,
+            'nueva_portada_url': evento.imagen_portada.url,
+            'message': '¡Nueva foto de portada subida y establecida!'
+        })
+        
+    return JsonResponse({'success': False, 'error': 'No se proporcionó imagen válida.'}, status=400)
+
+
+@login_required(login_url='inicio')
+def subir_foto_galeria_api(request, evento_id):
+    """
+    Permite al Super Admin agregar más fotos a la galería de un evento existente.
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Acceso denegado.'}, status=403)
+        
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido.'}, status=405)
+        
+    evento = get_object_or_404(Evento, id=evento_id)
+    archivos = request.FILES.getlist('fotos')
+    if not archivos and 'foto' in request.FILES:
+        archivos = [request.FILES['foto']]
+        
+    if not archivos:
+        return JsonResponse({'success': False, 'error': 'No se seleccionaron archivos.'}, status=400)
+        
+    nuevas_fotos = []
+    for f in archivos:
+        nueva_img = ImagenEvento.objects.create(evento=evento, imagen=f)
+        nuevas_fotos.append({'id': nueva_img.id, 'url': nueva_img.imagen.url})
+        
+    return JsonResponse({
+        'success': True,
+        'fotos': nuevas_fotos,
+        'message': f'Se agregaron {len(nuevas_fotos)} foto(s) a la galería.'
+    })
+
+
+@login_required(login_url='inicio')
+def eliminar_foto_galeria_api(request, imagen_id):
+    """
+    Permite al Super Admin eliminar una foto de la galería.
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Acceso denegado.'}, status=403)
+        
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido.'}, status=405)
+        
+    img_obj = get_object_or_404(ImagenEvento, id=imagen_id)
+    img_obj.delete()
+    
+    return JsonResponse({'success': True, 'message': 'Foto eliminada de la galería correctamente.'})
+
+
+@login_required(login_url='inicio')
+def mover_fecha_evento_api(request, evento_id):
+    """
+    Permite al Super Admin mover rápidamente la noticia a otra fecha y hora en el calendario.
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Acceso denegado.'}, status=403)
+        
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido.'}, status=405)
+        
+    evento = get_object_or_404(Evento, id=evento_id)
+    nueva_fecha_str = request.POST.get('fecha')
+    nueva_hora_str = request.POST.get('hora')
+    
+    if not nueva_fecha_str:
+        return JsonResponse({'success': False, 'error': 'La fecha es obligatoria.'}, status=400)
+        
+    try:
+        evento.fecha = datetime.strptime(nueva_fecha_str.strip(), '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'success': False, 'error': 'Formato de fecha inválido (AAAA-MM-DD).'}, status=400)
+        
+    if nueva_hora_str is not None:
+        hora_limpia = nueva_hora_str.strip()
+        if hora_limpia:
+            try:
+                evento.hora = datetime.strptime(hora_limpia, '%H:%M').time()
+            except ValueError:
+                pass
+        else:
+            evento.hora = None
+            
+    evento.save()
+    
+    return JsonResponse({
+        'success': True,
+        'fecha': evento.fecha.strftime('%Y-%m-%d'),
+        'time': evento.hora.strftime('%I:%M %p') if evento.hora else '',
+        'time_raw': evento.hora.strftime('%H:%M') if evento.hora else '',
+        'message': f'Noticia reprogramada al {evento.fecha.strftime("%d/%m/%Y")}.'
+    })
+
+
+@login_required(login_url='inicio')
+def eliminar_evento_api(request, evento_id):
+    """
+    Permite al Super Admin eliminar permanentemente un evento/boletín de la Sala de Prensa.
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Acceso denegado.'}, status=403)
+        
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido.'}, status=405)
+        
+    evento = get_object_or_404(Evento, id=evento_id)
+    evento_id_del = evento.id
+    titulo_del = evento.titulo or 'Evento'
+    evento.delete()
+    
+    return JsonResponse({
+        'success': True,
+        'id': evento_id_del,
+        'message': f'"{titulo_del}" ha sido eliminado exitosamente.'
+    })
+

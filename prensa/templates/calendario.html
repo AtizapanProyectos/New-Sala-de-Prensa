@@ -4,54 +4,409 @@
 {% block title %}Agenda Pública | Atizapán{% endblock %}
 
 {% block content %}
+<!-- TOKEN CSRF OCULTO PARA PETICIONES AJAX -->
+<div style="display:none;">
+    {% csrf_token %}
+</div>
+
 <style>
-    /* --- ESTILO FRANCÉS MEJORADO --- */
+    /* --- ESTILO FRANCÉS MEJORADO & PALETA INSTITUCIONAL --- */
     .agenda-container {
         background-color: #FAF6F0;
         min-height: 100vh;
-        padding: 60px 50px;
+        padding: 50px 40px 80px;
         border-radius: 10px;
+        font-family: 'Montserrat', sans-serif;
     }
 
     .agenda-header p { font-size: 0.9rem; letter-spacing: 5px; text-transform: uppercase; color: var(--color-accent); margin-bottom: 15px; font-weight: 600; text-align: center; }
-    .agenda-header h1 { font-family: 'Playfair Display', serif; font-size: 3.5rem; color: var(--color-primary); font-style: italic; text-align: center; margin-bottom: 50px;}
+    .agenda-header h1 { font-family: 'Playfair Display', serif; font-size: 3.2rem; color: var(--color-primary); font-style: italic; text-align: center; margin-bottom: 40px; }
 
-    .calendar-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid rgba(197, 164, 126, 0.3); }
-    .nav-btn-cal { background: transparent; border: 1px solid var(--color-accent); color: var(--color-primary); padding: 10px 25px; border-radius: 30px; cursor: pointer; transition: all 0.4s; font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; }
-    .nav-btn-cal:hover { background-color: var(--color-accent); color: #fff; }
-    #monthDisplay { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--color-text-dark); }
+    .calendar-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; padding-bottom: 20px; border-bottom: 1px solid rgba(197, 164, 126, 0.3); }
+    .nav-btn-cal { background: transparent; border: 1px solid var(--color-accent); color: var(--color-primary); padding: 10px 24px; border-radius: 30px; cursor: pointer; transition: all 0.3s; font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; font-weight: 600; }
+    .nav-btn-cal:hover { background-color: var(--color-accent); color: #fff; transform: translateY(-1px); }
+    #monthDisplay { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--color-primary); }
 
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 15px; }
-    .day-column { background: #ffffff; border-top: 4px solid var(--color-primary); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.04); min-height: 600px; display: flex; flex-direction: column; }
-    .day-header { text-align: center; padding: 20px 10px; border-bottom: 1px solid #f0f0f0; background-color: #fdfdfd; border-radius: 8px 8px 0 0; }
-    .day-name { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: #888; }
-    .day-number { display: block; font-family: 'Playfair Display', serif; font-size: 2.5rem; color: var(--color-primary); margin-top: 5px; }
-    .day-content { padding: 15px 10px; flex-grow: 1; overflow-y: auto; background: #FAF6F0; opacity: 0.7;}
-    .day-column.current-week .day-content { background: #ffffff; opacity: 1;} /* Resalta columnas con datos */
+    @media (max-width: 1200px) { .calendar-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (max-width: 768px) { .calendar-grid { grid-template-columns: 1fr; } }
+
+    .day-column { background: #ffffff; border-top: 4px solid var(--color-primary); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.04); min-height: 580px; display: flex; flex-direction: column; }
+    .day-header { text-align: center; padding: 18px 10px; border-bottom: 1px solid #f0f0f0; background-color: #fdfdfd; border-radius: 8px 8px 0 0; }
+    .day-name { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: #888; font-weight: 600; }
+    .day-number { display: block; font-family: 'Playfair Display', serif; font-size: 2.3rem; color: var(--color-primary); margin-top: 4px; }
+    .day-content { padding: 15px 10px; flex-grow: 1; overflow-y: auto; background: #FAF6F0; opacity: 0.85; }
+    .day-column.current-week .day-content { background: #ffffff; opacity: 1; }
 
     /* Tarjetas de Eventos */
-    .card { background: #fff; border-left: 4px solid var(--color-accent); padding: 15px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border-radius: 0 6px 6px 0;}
-    .card:hover { transform: scale(1.02); box-shadow: 0 8px 20px rgba(197, 164, 126, 0.2); border-left: 4px solid var(--color-primary); }
-    .card-thumb { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; margin-bottom: 12px; }
-    .card-tag { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-accent); font-weight: bold; display: block; margin-bottom: 8px; }
-    .card-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--color-primary); margin-bottom: 10px; line-height: 1.2; }
-    .card-time { font-size: 0.8rem; color: #666; font-weight: 500;}
+    .card { 
+        background: #fff; 
+        border-left: 4px solid var(--color-accent); 
+        padding: 14px; 
+        margin-bottom: 15px; 
+        cursor: pointer; 
+        transition: all 0.3s ease; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.04); 
+        border-radius: 0 8px 8px 0;
+        position: relative;
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(197, 164, 126, 0.22); border-left: 4px solid var(--color-primary); }
+    .card-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .card-tag { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-accent); font-weight: bold; display: block; }
+    
+    /* Botones de acción administrativa en la tarjeta */
+    .card-admin-bar {
+        display: flex;
+        gap: 5px;
+        opacity: 0.3;
+        transition: opacity 0.2s ease;
+    }
+    .card:hover .card-admin-bar { opacity: 1; }
+    .btn-card-act {
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.68rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-card-act:hover { transform: scale(1.15); }
+    .btn-card-edit:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .btn-card-move:hover { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+    .btn-card-del:hover { background: #dc2626; color: #fff; border-color: #dc2626; }
+
+    .card-thumb { width: 100%; height: 110px; object-fit: cover; border-radius: 4px; margin-bottom: 10px; border: 1px solid #f1f5f9; }
+    .card-title { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--color-primary); margin-bottom: 8px; line-height: 1.25; }
+    .card-time { font-size: 0.78rem; color: #666; font-weight: 500; }
 
     /* Modal Ultra Elegante */
-    .modal-fr { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 31, 61, 0.9); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+    .modal-fr { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 31, 61, 0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
     .modal-fr.active { display: flex; }
-    .modal-content-fr { background: #FAF6F0; padding: 50px; max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto; border-radius: 6px; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.3); }
+    .modal-content-fr { background: #FAF6F0; padding: 45px 50px; max-width: 850px; width: 95%; max-height: 90vh; overflow-y: auto; border-radius: 12px; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.35); border-top: 6px solid var(--color-primary); }
     
-    .btn-descarga { display: inline-block; background: var(--color-primary); color: white; padding: 12px 25px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; font-weight: bold; margin-top: 20px; transition: background 0.3s; }
-    .btn-descarga:hover { background: var(--color-accent); color: white;}
-    /* Estilo para el botón del Pack ZIP */
-    .btn-pack { display: inline-block; background: var(--color-accent); color: white; padding: 12px 25px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; font-weight: bold; margin-top: 20px; margin-left: 10px; transition: background 0.3s; box-shadow: 0 4px 10px rgba(197, 164, 126, 0.3); }
-    .btn-pack:hover { background: #a87b25; color: white; transform: translateY(-2px);}
-    
+    /* Panel Super Admin en Modal */
+    .admin-toolbar-modal {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-left: 4px solid var(--color-accent);
+        border-radius: 8px;
+        padding: 12px 18px;
+        margin-bottom: 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .admin-pill {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--color-primary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .admin-pill i { color: var(--color-accent); }
+    .admin-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-admin-pill {
+        border: none;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+    }
+    .btn-admin-edit { background: var(--color-primary); color: #fff; }
+    .btn-admin-edit:hover { background: #1a365d; transform: translateY(-1px); }
+    .btn-admin-move { background: var(--color-accent); color: #fff; }
+    .btn-admin-move:hover { background: #b38226; transform: translateY(-1px); }
+    .btn-admin-del { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+    .btn-admin-del:hover { background: #dc2626; color: #fff; transform: translateY(-1px); }
+
+    /* Contenedor de Portada */
+    .portada-wrapper {
+        position: relative;
+        margin-bottom: 25px;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    }
+    .portada-wrapper img {
+        width: 100%;
+        max-height: 420px;
+        object-fit: cover;
+        display: block;
+    }
+    .portada-badge-bar {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        right: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        pointer-events: none;
+    }
+    .portada-badge-bar > * { pointer-events: auto; }
+    .tag-portada-activa {
+        background: rgba(15, 31, 61, 0.85);
+        color: var(--color-accent);
+        backdrop-filter: blur(4px);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        border: 1px solid rgba(204, 153, 51, 0.4);
+    }
+    .btn-change-cover {
+        background: #ffffff;
+        color: var(--color-primary);
+        padding: 8px 14px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+        transition: all 0.2s;
+    }
+    .btn-change-cover:hover {
+        background: var(--color-accent);
+        color: #ffffff;
+        transform: translateY(-1px);
+    }
+
     /* Galería interna del Modal */
-    .modal-galeria { display: flex; gap: 10px; margin-top: 20px; overflow-x: auto; padding-bottom: 10px;}
-    .modal-galeria img { width: 120px; height: 80px; object-fit: cover; border-radius: 4px; border: 2px solid #ddd; cursor: pointer; transition: border 0.3s;}
-    .modal-galeria img:hover { border: 2px solid var(--color-accent); }
+    .galeria-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 25px;
+        margin-bottom: 12px;
+    }
+    .modal-galeria { 
+        display: flex; 
+        gap: 12px; 
+        overflow-x: auto; 
+        padding-bottom: 14px; 
+    }
+    .galeria-item-card {
+        position: relative;
+        flex-shrink: 0;
+        width: 140px;
+        height: 95px;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+        background: #000;
+    }
+    .galeria-item-card:hover { border-color: var(--color-accent); transform: scale(1.03); }
+    .galeria-item-card.is-current-cover { border-color: var(--color-accent); box-shadow: 0 0 0 2px var(--color-accent); }
+    .galeria-item-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        cursor: pointer;
+    }
+    .thumb-admin-actions {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        left: 4px;
+        display: flex;
+        justify-content: space-between;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    .galeria-item-card:hover .thumb-admin-actions { opacity: 1; }
+    .btn-thumb-set-cover {
+        background: rgba(15, 31, 61, 0.9);
+        color: #fff;
+        border: none;
+        padding: 3px 6px;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+    .btn-thumb-set-cover:hover { background: var(--color-accent); color: #fff; }
+    .btn-thumb-del {
+        background: rgba(220, 38, 38, 0.9);
+        color: #fff;
+        border: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .btn-thumb-del:hover { background: #b91c1c; }
+    .thumb-cover-tag {
+        position: absolute;
+        bottom: 4px;
+        left: 4px;
+        background: var(--color-accent);
+        color: #fff;
+        font-size: 0.55rem;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-add-photos-btn {
+        background: #f1f5f9;
+        border: 1px dashed var(--color-accent);
+        color: var(--color-primary);
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+    .btn-add-photos-btn:hover { background: var(--color-accent); color: #fff; }
+
+    /* Selector de fotos cargadas en Modal de Edición */
+    .edit-thumb-pick {
+        position: relative;
+        flex-shrink: 0;
+        width: 110px;
+        height: 75px;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 2px solid #cbd5e1;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #000;
+    }
+    .edit-thumb-pick:hover { border-color: var(--color-accent); transform: scale(1.04); }
+    .edit-thumb-pick.is-selected { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35); }
+    .edit-thumb-pick img { width: 100%; height: 100%; object-fit: cover; }
+    .edit-thumb-badge {
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        background: #10b981;
+        color: #fff;
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-weight: bold;
+    }
+
+    /* Botones de Descargas */
+    .btn-descarga { display: inline-block; background: var(--color-primary); color: white; padding: 12px 22px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.78rem; font-weight: bold; margin-top: 15px; transition: background 0.3s; text-decoration: none; }
+    .btn-descarga:hover { background: var(--color-accent); color: white; }
+    .btn-pack { display: inline-block; background: var(--color-accent); color: white; padding: 12px 22px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.78rem; font-weight: bold; margin-top: 15px; margin-left: 10px; transition: background 0.3s; box-shadow: 0 4px 10px rgba(197, 164, 126, 0.3); text-decoration: none; }
+    .btn-pack:hover { background: #a87b25; color: white; transform: translateY(-2px); }
+
+    /* MODAL DE EDICIÓN (SUPER ADMIN) */
+    .modal-edit-box {
+        background: #ffffff;
+        padding: 35px 40px;
+        max-width: 720px;
+        width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+        border-radius: 12px;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.35);
+        border-top: 6px solid var(--color-primary);
+    }
+    .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+    .edit-group { display: flex; flex-direction: column; margin-bottom: 15px; }
+    .edit-group.full { grid-column: span 2; }
+    .edit-group label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #475569;
+        margin-bottom: 6px;
+    }
+    .edit-input, .edit-textarea {
+        padding: 10px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        background: #f8fafc;
+    }
+    .edit-input:focus, .edit-textarea:focus {
+        outline: none;
+        border-color: var(--color-accent);
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(204, 153, 51, 0.15);
+    }
+    .edit-textarea { height: 95px; resize: vertical; }
+
+    /* MODAL DE MOVER FECHA */
+    .modal-move-box {
+        background: #ffffff;
+        padding: 35px;
+        max-width: 440px;
+        width: 95%;
+        border-radius: 12px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        border-top: 6px solid var(--color-accent);
+    }
+
+    .btn-submit-edit {
+        background: var(--color-primary);
+        color: #ffffff;
+        border: none;
+        padding: 14px 25px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+    .btn-submit-edit:hover { background: var(--color-accent); }
+    .btn-cancel-edit {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        padding: 14px 20px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+    .btn-cancel-edit:hover { background: #e2e8f0; }
 </style>
 
 <div class="agenda-container">
@@ -77,35 +432,195 @@
     </div>
 </div>
 
+<!-- ============================================== -->
+<!-- 1. MODAL DE DETALLE (VISOR CON MODO SUPER ADMIN)-->
+<!-- ============================================== -->
 <div class="modal-fr" id="detailModal">
     <div class="modal-content-fr">
-        <span onclick="toggleModal('detailModal')" style="position:absolute; top:20px; right:30px; font-size:1.5rem; cursor:pointer; color:#999;">&times;</span>
+        <span onclick="toggleModal('detailModal')" style="position:absolute; top:20px; right:25px; font-size:1.8rem; cursor:pointer; color:#94a3b8; transition:color 0.2s;" onmouseover="this.style.color='var(--color-primary)'" onmouseout="this.style.color='#94a3b8'">&times;</span>
         
-        <p id="det-tag" style="font-size: 0.8rem; letter-spacing: 3px; color: var(--color-accent); font-weight: 700; margin-bottom: 15px; text-transform: uppercase;"></p>
-        <h2 id="det-title" style="font-family: 'Playfair Display'; font-size: 2.5rem; color: var(--color-primary); margin-bottom: 20px; line-height: 1.1;"></h2>
+        <!-- BARRA SUPER ADMIN DENTRO DEL DETALLE -->
+        {% if user.is_superuser %}
+        <div class="admin-toolbar-modal" id="adminToolbarModal">
+            <div class="admin-pill">
+                <i class="fas fa-shield-alt"></i> Panel Super Admin
+            </div>
+            <div class="admin-btns">
+                <button type="button" class="btn-admin-pill btn-admin-edit" onclick="abrirModalEdicion()">
+                    <i class="fas fa-edit"></i> Editar Noticia
+                </button>
+                <button type="button" class="btn-admin-pill btn-admin-move" onclick="abrirModalMover()">
+                    <i class="fas fa-calendar-alt"></i> Mover Fecha
+                </button>
+                <button type="button" class="btn-admin-pill btn-admin-del" onclick="confirmarEliminarEvento()">
+                    <i class="fas fa-trash-alt"></i> Eliminar
+                </button>
+            </div>
+        </div>
+        {% endif %}
+
+        <p id="det-tag" style="font-size: 0.8rem; letter-spacing: 3px; color: var(--color-accent); font-weight: 700; margin-bottom: 12px; text-transform: uppercase;"></p>
+        <h2 id="det-title" style="font-family: 'Playfair Display'; font-size: 2.2rem; color: var(--color-primary); margin-bottom: 20px; line-height: 1.2;"></h2>
         
         <div id="det-descargas" style="margin-bottom: 25px;"></div>
 
-        <img id="det-img" src="" alt="Portada" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; margin-bottom: 20px; display: none; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+        <!-- CONTENEDOR DE FOTO DE PORTADA -->
+        <div class="portada-wrapper" id="portadaContainer" style="display:none;">
+            <img id="det-img" src="" alt="Portada de la noticia">
+            <div class="portada-badge-bar">
+                <span class="tag-portada-activa"><i class="fas fa-star"></i> Portada Oficial</span>
+                {% if user.is_superuser %}
+                <label class="btn-change-cover" for="inputCambiarPortadaDirecta">
+                    <i class="fas fa-camera"></i> Cambiar Portada
+                    <input type="file" id="inputCambiarPortadaDirecta" accept="image/*" style="display:none;" onchange="subirNuevaPortadaArchivo(this)">
+                </label>
+                {% endif %}
+            </div>
+        </div>
 
-        <p id="det-desc" style="line-height: 1.8; color: #444; font-size: 1.1rem; margin-bottom: 30px; border-left: 4px solid var(--color-accent); padding-left: 20px;"></p>
+        <p id="det-desc" style="line-height: 1.8; color: #444; font-size: 1.05rem; margin-bottom: 25px; border-left: 4px solid var(--color-accent); padding-left: 18px;"></p>
         
-        <h4 id="galeria-title" style="display:none; font-family: 'Montserrat'; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 2px; color: var(--color-primary);">Material Fotográfico</h4>
+        <!-- SECCIÓN DE GALERÍA CON GESTIÓN DE PORTADA -->
+        <div class="galeria-header-row">
+            <h4 id="galeria-title" style="display:none; font-family: 'Montserrat'; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 2px; color: var(--color-primary); margin: 0;">Material Fotográfico</h4>
+            {% if user.is_superuser %}
+            <button type="button" class="btn-add-photos-btn" id="btnAddPhotos" style="display:none;" onclick="document.getElementById('inputNuevasFotosGaleria').click();">
+                <i class="fas fa-plus-circle"></i> Agregar Fotos
+            </button>
+            <input type="file" id="inputNuevasFotosGaleria" multiple accept="image/*" style="display:none;" onchange="subirFotosGaleriaArchivo(this)">
+            {% endif %}
+        </div>
         <div id="det-galeria" class="modal-galeria"></div>
 
-        <div style="border-top: 1px solid #ddd; padding-top: 20px; margin-top: 30px; font-size: 0.95rem; display: flex; gap: 30px;">
-            <p id="det-time" style="font-weight: 600; color: var(--color-primary);"></p>
-            <p id="det-cobertura" style="color: var(--color-accent); font-weight: 600;"></p>
+        <div style="border-top: 1px solid #ddd; padding-top: 20px; margin-top: 25px; font-size: 0.9rem; display: flex; gap: 30px; flex-wrap: wrap;">
+            <p id="det-time" style="font-weight: 600; color: var(--color-primary); margin:0;"></p>
+            <p id="det-cobertura" style="color: var(--color-accent); font-weight: 600; margin:0;"></p>
         </div>
     </div>
 </div>
 
+<!-- ============================================== -->
+<!-- 2. MODAL DE EDICIÓN COMPLETA (SUPER ADMIN)      -->
+<!-- ============================================== -->
+{% if user.is_superuser %}
+<div class="modal-fr" id="editEventModal">
+    <div class="modal-edit-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:15px; margin-bottom:20px;">
+            <h3 style="margin:0; font-family:'Playfair Display', serif; color:var(--color-primary); font-size:1.6rem;"><i class="fas fa-edit" style="color:var(--color-accent);"></i> Editar Noticia</h3>
+            <span onclick="toggleModal('editEventModal')" style="font-size:1.8rem; cursor:pointer; color:#94a3b8;">&times;</span>
+        </div>
+
+        <form id="formEditarEvento" onsubmit="guardarEdicionEvento(event)" enctype="multipart/form-data">
+            <input type="hidden" id="edit-id">
+            
+            <div class="edit-group">
+                <label for="edit-titulo"><i class="fas fa-heading"></i> Título del Evento / Noticia</label>
+                <input type="text" id="edit-titulo" class="edit-input" required>
+            </div>
+
+            <div class="edit-grid">
+                <div class="edit-group">
+                    <label for="edit-fecha"><i class="far fa-calendar-alt"></i> Fecha de Publicación</label>
+                    <input type="date" id="edit-fecha" class="edit-input" required>
+                </div>
+                <div class="edit-group">
+                    <label for="edit-hora"><i class="far fa-clock"></i> Hora</label>
+                    <input type="time" id="edit-hora" class="edit-input">
+                </div>
+            </div>
+
+            <div class="edit-grid">
+                <div class="edit-group">
+                    <label for="edit-ubicacion"><i class="fas fa-map-marker-alt"></i> Ubicación</label>
+                    <input type="text" id="edit-ubicacion" class="edit-input">
+                </div>
+                <div class="edit-group">
+                    <label for="edit-cobertura"><i class="fas fa-tag"></i> Cobertura / Categoría</label>
+                    <input type="text" id="edit-cobertura" class="edit-input">
+                </div>
+            </div>
+
+            <div class="edit-group">
+                <label for="edit-desc"><i class="fas fa-align-left"></i> Descripción Corta</label>
+                <textarea id="edit-desc" class="edit-textarea"></textarea>
+            </div>
+
+            <div class="edit-group">
+                <label for="edit-contenido"><i class="fas fa-file-alt"></i> Cuerpo Completo de la Noticia</label>
+                <textarea id="edit-contenido" class="edit-textarea" style="height: 140px;"></textarea>
+            </div>
+
+            <!-- OPCIÓN A: ELEGIR DE LAS FOTOS YA CARGADAS EN EL BOLETÍN -->
+            <div class="edit-group" id="edit-galeria-group" style="display:none; background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;">
+                <label style="color:var(--color-primary); margin-bottom:4px;"><i class="fas fa-images"></i> Opción A: Elegir portada de las fotos ya cargadas en este boletín</label>
+                <small style="color:#64748b; display:block; margin-bottom:10px;">Haz clic sobre cualquiera de las fotos ya existentes para seleccionarla como portada oficial:</small>
+                <div id="edit-galeria-selector" style="display:flex; gap:12px; overflow-x:auto; padding:6px 2px;"></div>
+                <input type="hidden" id="edit-selected-imagen-id" value="">
+            </div>
+
+            <!-- OPCIÓN B: SUBIR UNA IMAGEN PERSONALIZADA DESDE EL EQUIPO -->
+            <div class="edit-group">
+                <label for="edit-nueva-portada"><i class="fas fa-upload"></i> Opción B: O subir una imagen personalizada desde tu equipo (Opcional)</label>
+                <input type="file" id="edit-nueva-portada" class="edit-input" accept="image/*">
+                <small style="color:#64748b; margin-top:4px;">Si prefieres una foto nueva que no está en el boletín, selecciónala aquí. Deja vacío si deseas conservar la portada actual.</small>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:25px; border-top:1px solid #e2e8f0; padding-top:20px;">
+                <button type="button" class="btn-cancel-edit" onclick="toggleModal('editEventModal')">Cancelar</button>
+                <button type="submit" class="btn-submit-edit" id="btnGuardarEdicion"><i class="fas fa-save"></i> Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============================================== -->
+<!-- 3. MODAL DE MOVER FECHA RÁPIDO (SUPER ADMIN)   -->
+<!-- ============================================== -->
+<div class="modal-fr" id="moveEventModal">
+    <div class="modal-move-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:20px;">
+            <h3 style="margin:0; font-family:'Playfair Display', serif; color:var(--color-primary); font-size:1.4rem;"><i class="fas fa-calendar-alt" style="color:var(--color-accent);"></i> Mover Fecha</h3>
+            <span onclick="toggleModal('moveEventModal')" style="font-size:1.8rem; cursor:pointer; color:#94a3b8;">&times;</span>
+        </div>
+
+        <form id="formMoverFecha" onsubmit="guardarMoverFecha(event)">
+            <input type="hidden" id="move-id">
+            
+            <p style="font-size:0.9rem; color:#475569; margin-bottom:15px;">Selecciona la nueva fecha para posicionar este evento en el calendario:</p>
+
+            <div class="edit-group">
+                <label for="move-fecha"><i class="far fa-calendar-alt"></i> Nueva Fecha</label>
+                <input type="date" id="move-fecha" class="edit-input" required>
+            </div>
+
+            <div class="edit-group">
+                <label for="move-hora"><i class="far fa-clock"></i> Hora (Opcional)</label>
+                <input type="time" id="move-hora" class="edit-input">
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:25px; border-top:1px solid #e2e8f0; padding-top:18px;">
+                <button type="button" class="btn-cancel-edit" onclick="toggleModal('moveEventModal')">Cancelar</button>
+                <button type="submit" class="btn-submit-edit" id="btnConfirmarMover"><i class="fas fa-check"></i> Mover Evento</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 <script>
+    const esSuperAdmin = {{ user.is_superuser|yesno:"true,false" }};
     let events = {{ eventos_json|safe }};
+    let eventoActual = null;
+
     let hoy = new Date();
     let diaSemana = hoy.getDay(); 
     let diferencia = hoy.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
     let currentMonday = new Date(hoy.setDate(diferencia));
+
+    function getCsrfToken() {
+        const input = document.querySelector('[name=csrfmiddlewaretoken]');
+        return input ? input.value : '';
+    }
 
     function updateCalendar() {
         const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -126,11 +641,32 @@
                 
                 let imagenHtml = ev.imagen ? `<img src="${ev.imagen}" class="card-thumb" alt="Miniatura">` : '';
 
+                // Opciones de acción para Super Admin
+                let adminBarHtml = '';
+                if (esSuperAdmin) {
+                    adminBarHtml = `
+                        <div class="card-admin-bar">
+                            <button type="button" class="btn-card-act btn-card-edit" title="Editar noticia" onclick="event.stopPropagation(); abrirModalEdicionPorId(${ev.id})">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button type="button" class="btn-card-act btn-card-move" title="Mover de fecha" onclick="event.stopPropagation(); abrirModalMoverPorId(${ev.id})">
+                                <i class="fas fa-calendar-day"></i>
+                            </button>
+                            <button type="button" class="btn-card-act btn-card-del" title="Eliminar noticia" onclick="event.stopPropagation(); confirmarEliminarEventoPorId(${ev.id})">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+
                 card.innerHTML = `
+                    <div class="card-header-row">
+                        <span class="card-tag">${ev.tag || 'Atizapán'}</span>
+                        ${adminBarHtml}
+                    </div>
                     ${imagenHtml}
-                    <span class="card-tag">${ev.tag}</span>
                     <h3 class="card-title">${ev.title}</h3>
-                    <p class="card-time"><i class="far fa-clock"></i> ${ev.time}</p>
+                    <p class="card-time"><i class="far fa-clock"></i> ${ev.time || 'Hora pendiente'}</p>
                 `;
                 container.appendChild(card);
             });
@@ -139,57 +675,539 @@
     }
 
     function changeWeek(dir) { currentMonday.setDate(currentMonday.getDate() + (dir * 7)); updateCalendar(); }
-    function toggleModal(id) { document.getElementById(id).classList.toggle('active'); }
+    
+    function toggleModal(id, forceState) { 
+        const modal = document.getElementById(id);
+        if(!modal) return;
+        if (typeof forceState !== 'undefined') {
+            if (forceState) modal.classList.add('active');
+            else modal.classList.remove('active');
+        } else {
+            modal.classList.toggle('active');
+        }
+    }
 
+    // ==============================================
+    // ABRIR Y MOSTRAR DETALLE DEL EVENTO
+    // ==============================================
     function openDetail(ev) {
-        document.getElementById('det-tag').innerText = ev.tag;
-        document.getElementById('det-title').innerText = ev.title;
-        document.getElementById('det-desc').innerText = ev.desc;
-        document.getElementById('det-desc').innerText = ev.contenido;
-        document.getElementById('det-time').innerHTML = '<i class="far fa-clock"></i> ' + ev.time;
-        document.getElementById('det-cobertura').innerHTML = '<i class="fas fa-camera"></i> COBERTURA: ' + ev.cobertura;
+        eventoActual = ev;
+
+        document.getElementById('det-tag').innerText = ev.tag || 'Atizapán de Zaragoza';
+        document.getElementById('det-title').innerText = ev.title || 'Evento sin título';
+        document.getElementById('det-desc').innerText = ev.contenido || ev.desc || '';
+        document.getElementById('det-time').innerHTML = '<i class="far fa-clock"></i> ' + (ev.time || 'Hora pendiente');
+        document.getElementById('det-cobertura').innerHTML = '<i class="fas fa-camera"></i> COBERTURA: ' + (ev.cobertura || 'General');
         
         // Manejo de la Portada
+        const portadaContainer = document.getElementById('portadaContainer');
         const imgElement = document.getElementById('det-img');
         if (ev.imagen) {
             imgElement.src = ev.imagen;
-            imgElement.style.display = 'block';
+            portadaContainer.style.display = 'block';
         } else {
-            imgElement.style.display = 'none';
+            imgElement.src = '';
+            portadaContainer.style.display = 'none';
         }
 
-        // Manejo del Documento Word
-        // Manejo de Botones de Descarga
+        // Botones de Descarga
         const descargasDiv = document.getElementById('det-descargas');
         descargasDiv.innerHTML = '';
-        
-        // 1. Botón de Word (Si existe)
         if(ev.documento_url){
             descargasDiv.innerHTML += `<a href="${ev.documento_url}" download class="btn-descarga"><i class="fas fa-file-word"></i> Descargar Word</a>`;
         }
-        
-        // 2. Botón del SUPER PACK ZIP (Aparece siempre)
         descargasDiv.innerHTML += `<a href="/agenda/descargar-pack/${ev.id}/" class="btn-pack"><i class="fas fa-file-archive"></i> Descargar Pack de Medios (ZIP)</a>`;
 
-        // Manejo de la Galería de fotos múltiples
-        const galeriaDiv = document.getElementById('det-galeria');
-        const galeriaTitle = document.getElementById('galeria-title');
-        galeriaDiv.innerHTML = '';
-        
-        if(ev.galeria && ev.galeria.length > 0){
-            galeriaTitle.style.display = 'block';
-            ev.galeria.forEach(url => {
-                // Al hacer clic en una miniatura, la ponemos como imagen principal (portada)
-                galeriaDiv.innerHTML += `<img src="${url}" onclick="document.getElementById('det-img').src='${url}'" alt="Foto galería">`;
-            });
-        } else {
-            galeriaTitle.style.display = 'none';
-        }
+        // Renderizar Galería con selector de portada
+        renderizarGaleriaModal(ev);
 
-        toggleModal('detailModal');
+        toggleModal('detailModal', true);
     }
 
-    window.onclick = (e) => { if(e.target.classList.contains('modal-fr')) e.target.classList.remove('active'); }
+    function renderizarGaleriaModal(ev) {
+        const galeriaDiv = document.getElementById('det-galeria');
+        const galeriaTitle = document.getElementById('galeria-title');
+        const btnAddPhotos = document.getElementById('btnAddPhotos');
+        galeriaDiv.innerHTML = '';
+
+        const listaFotos = ev.galeria_detallada || (ev.galeria ? ev.galeria.map((u, i) => ({id: i, url: u})) : []);
+
+        if(listaFotos && listaFotos.length > 0){
+            galeriaTitle.style.display = 'block';
+            if (btnAddPhotos) btnAddPhotos.style.display = 'inline-flex';
+
+            listaFotos.forEach(item => {
+                const url = item.url;
+                const imgId = item.id;
+                const esPortadaActual = (ev.imagen && ev.imagen.split('?')[0].endsWith(url.split('?')[0]));
+
+                const thumbBox = document.createElement('div');
+                thumbBox.className = `galeria-item-card ${esPortadaActual ? 'is-current-cover' : ''}`;
+                
+                let adminActionsHtml = '';
+                if (esSuperAdmin) {
+                    adminActionsHtml = `
+                        <div class="thumb-admin-actions">
+                            ${!esPortadaActual ? `
+                                <button type="button" class="btn-thumb-set-cover" title="Establecer como foto de portada" onclick="event.stopPropagation(); seleccionarComoPortada(${imgId}, '${url}')">
+                                    <i class="fas fa-star"></i> Portada
+                                </button>
+                            ` : '<span></span>'}
+                            <button type="button" class="btn-thumb-del" title="Eliminar foto de galería" onclick="event.stopPropagation(); eliminarFotoGaleria(${imgId})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+
+                thumbBox.innerHTML = `
+                    <img src="${url}" onclick="document.getElementById('det-img').src='${url}'" alt="Foto galería">
+                    ${adminActionsHtml}
+                    ${esPortadaActual ? `<span class="thumb-cover-tag"><i class="fas fa-check"></i> Portada</span>` : ''}
+                `;
+                galeriaDiv.appendChild(thumbBox);
+            });
+        } else {
+            galeriaTitle.style.display = esSuperAdmin ? 'block' : 'none';
+            if (btnAddPhotos) btnAddPhotos.style.display = 'inline-flex';
+        }
+    }
+
+    // ==============================================
+    // SELECCIONAR Y CAMBIAR PORTADA (SUPER ADMIN)
+    // ==============================================
+    window.seleccionarComoPortada = function(imgId, url) {
+        if (!eventoActual) return;
+
+        const formData = new FormData();
+        formData.append('imagen_id', imgId);
+
+        fetch(`/agenda/evento/${eventoActual.id}/seleccionar-portada/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                eventoActual.imagen = data.nueva_portada_url;
+                document.getElementById('det-img').src = data.nueva_portada_url;
+                document.getElementById('portadaContainer').style.display = 'block';
+
+                // Actualizar objeto en array events
+                const evObj = events.find(e => e.id === eventoActual.id);
+                if (evObj) evObj.imagen = data.nueva_portada_url;
+
+                renderizarGaleriaModal(eventoActual);
+                updateCalendar();
+
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: '¡Portada actualizada!',
+                    showConfirmButton: false,
+                    timer: 2200,
+                    background: '#0f1f3d',
+                    color: '#ffffff'
+                });
+            } else {
+                Swal.fire('Error', data.error || 'No se pudo actualizar la portada', 'error');
+            }
+        })
+        .catch(err => Swal.fire('Error', 'Fallo de conexión al cambiar portada', 'error'));
+    };
+
+    window.subirNuevaPortadaArchivo = function(input) {
+        if (!input.files || input.files.length === 0 || !eventoActual) return;
+        const file = input.files[0];
+
+        const formData = new FormData();
+        formData.append('nueva_portada', file);
+
+        Swal.fire({
+            title: 'Subiendo portada...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        fetch(`/agenda/evento/${eventoActual.id}/seleccionar-portada/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            input.value = '';
+            if (data.success) {
+                eventoActual.imagen = data.nueva_portada_url;
+                document.getElementById('det-img').src = data.nueva_portada_url;
+                document.getElementById('portadaContainer').style.display = 'block';
+
+                const evObj = events.find(e => e.id === eventoActual.id);
+                if (evObj) evObj.imagen = data.nueva_portada_url;
+
+                updateCalendar();
+                Swal.fire('¡Éxito!', data.message, 'success');
+            } else {
+                Swal.fire('Error', data.error || 'Error al subir portada', 'error');
+            }
+        })
+        .catch(() => Swal.fire('Error', 'Fallo de conexión', 'error'));
+    };
+
+    // ==============================================
+    // SUBIR Y ELIMINAR FOTOS DE GALERÍA (SUPER ADMIN)
+    // ==============================================
+    window.subirFotosGaleriaArchivo = function(input) {
+        if (!input.files || input.files.length === 0 || !eventoActual) return;
+        
+        const formData = new FormData();
+        Array.from(input.files).forEach(f => formData.append('fotos', f));
+
+        Swal.fire({
+            title: 'Agregando fotos...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        fetch(`/agenda/evento/${eventoActual.id}/subir-fotos/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            input.value = '';
+            if (data.success) {
+                if (!eventoActual.galeria_detallada) eventoActual.galeria_detallada = [];
+                if (!eventoActual.galeria) eventoActual.galeria = [];
+
+                data.fotos.forEach(item => {
+                    eventoActual.galeria_detallada.push(item);
+                    eventoActual.galeria.push(item.url);
+                });
+
+                renderizarGaleriaModal(eventoActual);
+                Swal.fire('¡Fotos Agregadas!', data.message, 'success');
+            } else {
+                Swal.fire('Error', data.error || 'Error al agregar fotos', 'error');
+            }
+        })
+        .catch(() => Swal.fire('Error', 'Fallo de conexión', 'error'));
+    };
+
+    window.eliminarFotoGaleria = function(imgId) {
+        Swal.fire({
+            title: '¿Eliminar foto?',
+            text: 'Esta fotografía será removida de la galería del boletín.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(res => {
+            if (res.isConfirmed) {
+                fetch(`/agenda/foto/${imgId}/eliminar/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        if (eventoActual.galeria_detallada) {
+                            eventoActual.galeria_detallada = eventoActual.galeria_detallada.filter(item => item.id !== imgId);
+                        }
+                        renderizarGaleriaModal(eventoActual);
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: 'Foto eliminada',
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
+                    } else {
+                        Swal.fire('Error', data.error || 'No se pudo eliminar la foto', 'error');
+                    }
+                });
+            }
+        });
+    };
+
+    // ==============================================
+    // EDICIÓN DE EVENTO (SUPER ADMIN)
+    // ==============================================
+    window.abrirModalEdicionPorId = function(id) {
+        const ev = events.find(e => e.id === id);
+        if (ev) {
+            eventoActual = ev;
+            abrirModalEdicion();
+        }
+    };
+
+    window.abrirModalEdicion = function() {
+        if (!eventoActual) return;
+
+        document.getElementById('edit-id').value = eventoActual.id;
+        document.getElementById('edit-titulo').value = eventoActual.title || '';
+        document.getElementById('edit-fecha').value = eventoActual.date || '';
+        document.getElementById('edit-hora').value = eventoActual.time_raw || '';
+        document.getElementById('edit-ubicacion').value = eventoActual.tag || '';
+        document.getElementById('edit-cobertura').value = eventoActual.cobertura || '';
+        document.getElementById('edit-desc').value = eventoActual.desc || '';
+        document.getElementById('edit-contenido').value = eventoActual.contenido || eventoActual.desc || '';
+        document.getElementById('edit-nueva-portada').value = '';
+
+        // Poblar selector interactivo de fotos ya cargadas en este boletín
+        const galGroup = document.getElementById('edit-galeria-group');
+        const galSelector = document.getElementById('edit-galeria-selector');
+        const selectedInput = document.getElementById('edit-selected-imagen-id');
+        selectedInput.value = '';
+        galSelector.innerHTML = '';
+
+        const listaFotos = eventoActual.galeria_detallada || (eventoActual.galeria ? eventoActual.galeria.map((u, i) => ({id: i, url: u})) : []);
+
+        if (listaFotos && listaFotos.length > 0) {
+            galGroup.style.display = 'block';
+            listaFotos.forEach(item => {
+                const esActual = eventoActual.imagen && eventoActual.imagen.split('?')[0].endsWith(item.url.split('?')[0]);
+                const thumb = document.createElement('div');
+                thumb.className = `edit-thumb-pick ${esActual ? 'is-selected' : ''}`;
+                thumb.id = `thumb_pick_${item.id}`;
+                if (esActual) selectedInput.value = item.id;
+                
+                thumb.onclick = () => {
+                    document.querySelectorAll('.edit-thumb-pick').forEach(el => {
+                        el.classList.remove('is-selected');
+                        const b = el.querySelector('.edit-thumb-badge');
+                        if (b) b.style.display = 'none';
+                    });
+                    thumb.classList.add('is-selected');
+                    const b = thumb.querySelector('.edit-thumb-badge');
+                    if (b) b.style.display = 'block';
+                    selectedInput.value = item.id;
+                    // Limpiar el input de archivo personalizado por si había elegido uno
+                    document.getElementById('edit-nueva-portada').value = '';
+                };
+                thumb.innerHTML = `
+                    <img src="${item.url}" alt="Foto">
+                    <span class="edit-thumb-badge" style="${esActual ? '' : 'display:none;'}"><i class="fas fa-check"></i> Portada</span>
+                `;
+                galSelector.appendChild(thumb);
+            });
+        } else {
+            galGroup.style.display = 'none';
+        }
+
+        toggleModal('editEventModal', true);
+    };
+
+    window.guardarEdicionEvento = function(e) {
+        e.preventDefault();
+        const evId = document.getElementById('edit-id').value;
+        const btnSubmit = document.getElementById('btnGuardarEdicion');
+        const origText = btnSubmit.innerHTML;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        btnSubmit.disabled = true;
+
+        const formData = new FormData();
+        formData.append('titulo', document.getElementById('edit-titulo').value);
+        formData.append('fecha', document.getElementById('edit-fecha').value);
+        formData.append('hora', document.getElementById('edit-hora').value);
+        formData.append('ubicacion', document.getElementById('edit-ubicacion').value);
+        formData.append('cobertura', document.getElementById('edit-cobertura').value);
+        formData.append('descripcion', document.getElementById('edit-desc').value);
+        formData.append('contenido', document.getElementById('edit-contenido').value);
+
+        // Opción A: Foto de la galería existente seleccionada
+        const selectedId = document.getElementById('edit-selected-imagen-id').value;
+        if (selectedId) {
+            formData.append('selected_imagen_id', selectedId);
+        }
+
+        // Opción B: Nueva portada personalizada subida desde el equipo
+        const fileInput = document.getElementById('edit-nueva-portada');
+        if (fileInput.files && fileInput.files.length > 0) {
+            formData.append('imagen_portada', fileInput.files[0]);
+        }
+
+        fetch(`/agenda/evento/${evId}/editar/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            btnSubmit.innerHTML = origText;
+            btnSubmit.disabled = false;
+
+            if (data.success) {
+                // Actualizar evento en el array global
+                const index = events.findIndex(e => e.id == evId);
+                if (index !== -1) {
+                    events[index] = Object.assign({}, events[index], data.evento);
+                }
+                eventoActual = Object.assign({}, eventoActual, data.evento);
+
+                updateCalendar();
+                toggleModal('editEventModal', false);
+
+                // Si el detalle está abierto, refrescar contenido
+                if (document.getElementById('detailModal').classList.contains('active')) {
+                    openDetail(eventoActual);
+                }
+
+                Swal.fire('¡Actualizado!', data.message, 'success');
+            } else {
+                Swal.fire('Error', data.error || 'Ocurrió un error al guardar', 'error');
+            }
+        })
+        .catch(err => {
+            btnSubmit.innerHTML = origText;
+            btnSubmit.disabled = false;
+            Swal.fire('Error', 'Fallo de conexión al guardar cambios', 'error');
+        });
+    };
+
+    // ==============================================
+    // MOVER FECHA DE EVENTO (SUPER ADMIN)
+    // ==============================================
+    window.abrirModalMoverPorId = function(id) {
+        const ev = events.find(e => e.id === id);
+        if (ev) {
+            eventoActual = ev;
+            abrirModalMover();
+        }
+    };
+
+    window.abrirModalMover = function() {
+        if (!eventoActual) return;
+        document.getElementById('move-id').value = eventoActual.id;
+        document.getElementById('move-fecha').value = eventoActual.date || '';
+        document.getElementById('move-hora').value = eventoActual.time_raw || '';
+        toggleModal('moveEventModal', true);
+    };
+
+    window.guardarMoverFecha = function(e) {
+        e.preventDefault();
+        const evId = document.getElementById('move-id').value;
+        const btnConfirm = document.getElementById('btnConfirmarMover');
+        const origText = btnConfirm.innerHTML;
+        btnConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Moviendo...';
+        btnConfirm.disabled = true;
+
+        const formData = new FormData();
+        formData.append('fecha', document.getElementById('move-fecha').value);
+        formData.append('hora', document.getElementById('move-hora').value);
+
+        fetch(`/agenda/evento/${evId}/mover-fecha/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            btnConfirm.innerHTML = origText;
+            btnConfirm.disabled = false;
+
+            if (data.success) {
+                const index = events.findIndex(e => e.id == evId);
+                if (index !== -1) {
+                    events[index].date = data.fecha;
+                    events[index].time = data.time;
+                    events[index].time_raw = data.time_raw;
+                }
+                if (eventoActual && eventoActual.id == evId) {
+                    eventoActual.date = data.fecha;
+                    eventoActual.time = data.time;
+                    eventoActual.time_raw = data.time_raw;
+                }
+
+                updateCalendar();
+                toggleModal('moveEventModal', false);
+
+                if (document.getElementById('detailModal').classList.contains('active')) {
+                    document.getElementById('det-time').innerHTML = '<i class="far fa-clock"></i> ' + (eventoActual.time || '');
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Evento Movido!',
+                    text: data.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire('Error', data.error || 'No se pudo mover el evento', 'error');
+            }
+        })
+        .catch(() => {
+            btnConfirm.innerHTML = origText;
+            btnConfirm.disabled = false;
+            Swal.fire('Error', 'Fallo de conexión al mover fecha', 'error');
+        });
+    };
+
+    // ==============================================
+    // ELIMINAR EVENTO (SUPER ADMIN)
+    // ==============================================
+    window.confirmarEliminarEventoPorId = function(id) {
+        const ev = events.find(e => e.id === id);
+        if (ev) {
+            eventoActual = ev;
+            confirmarEliminarEvento();
+        }
+    };
+
+    window.confirmarEliminarEvento = function() {
+        if (!eventoActual) return;
+        const ev = eventoActual;
+
+        Swal.fire({
+            title: '¿Eliminar este boletín / evento?',
+            text: `Se borrará permanentemente "${ev.title}". Esta acción no se puede deshacer.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, eliminar definitivamente',
+            cancelButtonText: 'Cancelar'
+        }).then(result => {
+            if (result.isConfirmed) {
+                fetch(`/agenda/evento/${ev.id}/eliminar/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        events = events.filter(e => e.id !== ev.id);
+                        updateCalendar();
+                        toggleModal('detailModal', false);
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Eliminado!',
+                            text: data.message,
+                            confirmButtonColor: '#0f1f3d'
+                        });
+                    } else {
+                        Swal.fire('Error', data.error || 'No se pudo eliminar el evento', 'error');
+                    }
+                })
+                .catch(() => Swal.fire('Error', 'Fallo de conexión al eliminar evento', 'error'));
+            }
+        });
+    };
+
+    window.onclick = (e) => { 
+        if(e.target.classList.contains('modal-fr')) {
+            e.target.classList.remove('active');
+        }
+    };
+
     updateCalendar();
 </script>
 {% endblock %}
